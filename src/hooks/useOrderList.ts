@@ -1,72 +1,99 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 export type Contract = 'PI_XBTUSD' | 'PI_ETHUSD';
 
 interface OrderListSubscribeOptions {
   url: string;
-  contract: Contract;
-  active: boolean;
+}
+
+interface Socket {
+  onmessage: (this: Socket, e: MessageEvent<any>) => void;
+}
+
+const defaultSocket: Socket = {
+  onmessage: () => {},
+};
+
+type Order = [price: number, size: number];
+
+type WSData =
+  | { event: 'info'; version: number }
+  | { event: 'subscribed'; feed: string; product_ids: Contract[] }
+  | Snapshot
+  | { feed: string; product_id: Contract; bids: Order[]; asks: Order[] };
+
+interface Snapshot {
+  numLevels: number;
+  feed: string;
+  bids: Order[];
+  asks: Order[];
+  product_id: Contract;
+}
+
+interface OrderList {
+  bids: number;
 }
 
 export const useOrderList = (opts: OrderListSubscribeOptions) => {
-  const { url, contract, active } = opts;
-  const [open, setOpen] = useState(false);
-  const ws = useMemo(() => new WebSocket(url), [url]);
+  const { url } = opts;
+  const [contract, setContract] = useState<Contract>('PI_XBTUSD');
+  const [instance, setInstance] = useState<WebSocket | null>(null);
+  const [bids, setBids] = useState<Order[]>([]);
+  const [asks, setAsks] = useState<Order[]>([]);
 
-  useEffect(() => {
-    ws.onopen = () => setOpen(true);
-    ws.onclose = () => setOpen(false);
+  const onMessage = (e: MessageEvent<string>) => {
+    const data: WSData = JSON.parse(e.data);
 
-    ws.onmessage = console.log;
-    return () => {
-      ws.close();
+    if ('numLevels' in data) {
+      // snapshot
+      console.log(data);
+      setBids(data.bids);
+      //setAsks(data.asks);
+    } else if ('bids' in data && 'asks' in data) {
+      // delta
+      setBids((currentBids) => [...currentBids, ...data.bids]);
+      setAsks((currentAsks) => [...currentAsks, ...data.asks]);
+    }
+  };
+
+  const start = () => {
+    const sock = new WebSocket(url);
+    setInstance(sock);
+    sock.onmessage = onMessage;
+    sock.onopen = () => {
+      const sub = { event: 'subscribe', feed: 'book_ui_1', product_ids: [contract] };
+      sock.send(JSON.stringify(sub));
     };
-  }, [ws]);
+  };
 
-  useEffect(() => {
-    if (!open) return;
-    console.log('i am now open');
+  const stop = () => {
+    instance?.close();
+    setInstance(null);
+  };
 
-    const sub = { event: 'subscribe', feed: 'book_ui_1', product_ids: [contract] };
+  const toggleContract = () => {
+    if (!instance) return;
+    const next: Contract = contract === 'PI_XBTUSD' ? 'PI_ETHUSD' : 'PI_XBTUSD';
+    const sub = { event: 'subscribe', feed: 'book_ui_1', product_ids: [next] };
     const unsub = {
       event: 'unsubscribe',
       feed: 'book_ui_1',
-      product_ids: ['PI_XBTUSD', 'PI_ETHUSD'].filter((c) => c !== contract),
+      product_ids: ['PI_XBTUSD', 'PI_ETHUSD'].filter((c) => c !== next),
     };
 
-    ws.send(JSON.stringify(unsub));
-    ws.send(JSON.stringify(sub));
-  }, [open, contract]);
+    instance.send(JSON.stringify(unsub));
+    instance.send(JSON.stringify(sub));
+    setContract(next);
+  };
 
-  // useEffect(() => {
-  //   console.log('ws now open', ws.OPEN);
-  //   const others = ['PI_XBTUSD', 'PI_ETHUSD'].filter((c) => c !== contract).map((c) => `"${c}"`);
-  //   const unsub = `{"event":"unsubscribe","feed":"book_ui_1","product_ids":[${others.toString()}]}`;
-  //   console.log(unsub);
-
-  //   ws.send(unsub);
-  // }, [ws.OPEN]);
-
-  // useEffect(() => {
-  //   const others = ['PI_XBTUSD', 'PI_ETHUSD'].filter((c) => c !== contract).map((c) => `"${c}"`);
-  //   const unsub = `{"event":"unsubscribe","feed":"book_ui_1","product_ids":[${others.toString()}]}`;
-  //   console.log(unsub);
-
-  //   ws.send(unsub);
-  // }, [contract]);
-
-  // useEffect(() => {
-  //   ws.onopen = () => {
-  //     const message = '{"event":"subscribe","feed":"book_ui_1","product_ids":["PI_XBTUSD"]}';
-  //     ws.send(message);
-  //   };
-
-  //   // ws.onmessage = (msg) => {
-  //   //   console.log("message", msg);
-  //   // };
-
-  //   return () => {
-  //     ws.close();
-  //   };
-  // }, [ws]);
+  return {
+    active: instance !== null && instance.OPEN === 1,
+    bids,
+    asks,
+    methods: {
+      start,
+      stop,
+      toggleContract,
+    },
+  };
 };
