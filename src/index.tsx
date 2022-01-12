@@ -1,11 +1,11 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 import './index.css';
-import App from './App';
 import reportWebVitals from './reportWebVitals';
-import reducer from './orders.slice';
+import reducer from './features/orders/orders.slice';
 import { AsyncThunkPayloadCreator, configureStore, createAsyncThunk } from '@reduxjs/toolkit';
 import { Provider } from 'react-redux';
+import OrderList from './features/orders';
 
 const store = configureStore({ reducer });
 
@@ -28,7 +28,7 @@ export function createAppThunk<Returned = void, ThunkArg = void>(
 ReactDOM.render(
   <React.StrictMode>
     <Provider store={store}>
-      <App />
+      <OrderList />
     </Provider>
   </React.StrictMode>,
   document.getElementById('root')

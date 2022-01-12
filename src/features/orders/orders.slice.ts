@@ -5,9 +5,8 @@ import {
   EntityState,
   PayloadAction,
 } from '@reduxjs/toolkit';
-import { createAppThunk } from '.';
+import { Contract, getSubscribeMessage, getUnsubscrbeMessage } from './orders.api';
 
-type Contract = 'PI_XBTUSD' | 'PI_ETHUSD';
 type Order = [price: number, size: number];
 
 const orderAdapter = createEntityAdapter<Order>({
@@ -36,21 +35,15 @@ const initialState: OrderState = {
   contract: 'PI_XBTUSD',
 };
 
-export const changeContract = createAsyncThunk<Contract, { sendMessage: (x: string) => void }>(
-  'orders/changeContract',
+export const toggleContract = createAsyncThunk<Contract, { sendMessage: (x: string) => void }>(
+  'orders/toggleContract',
   ({ sendMessage }, { getState }) => {
     const { contract } = getState() as OrderState;
     const next = contract === 'PI_XBTUSD' ? 'PI_ETHUSD' : 'PI_XBTUSD';
-    const sub = { event: 'subscribe', feed: 'book_ui_1', product_ids: [next] };
-    const unsub = {
-      event: 'unsubscribe',
-      feed: 'book_ui_1',
-      product_ids: ['PI_XBTUSD', 'PI_ETHUSD'].filter((c) => c !== next),
-    };
-
-    sendMessage(JSON.stringify(sub));
-    sendMessage(JSON.stringify(unsub));
-
+    const sub = JSON.stringify(getSubscribeMessage(next));
+    const unsub = JSON.stringify(getUnsubscrbeMessage(contract));
+    sendMessage(sub);
+    sendMessage(unsub);
     return next;
   }
 );
@@ -69,7 +62,7 @@ const ordersSlice = createSlice({
     },
   },
   extraReducers: (builder) => {
-    builder.addCase(changeContract.fulfilled, (state, action) => {
+    builder.addCase(toggleContract.fulfilled, (state, action) => {
       state.contract = action.payload;
       state.bids = orderAdapter.getInitialState();
       state.asks = orderAdapter.getInitialState();
