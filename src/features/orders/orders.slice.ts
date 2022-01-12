@@ -7,21 +7,29 @@ import {
 } from '@reduxjs/toolkit';
 import { Contract, getSubscribeMessage, getUnsubscrbeMessage } from './orders.api';
 
-type Order = [price: number, size: number];
-type OrderModel = { price: number; size: number; total: number };
+export type OrderTuple = [price: number, size: number];
+
+type Order = { price: number; size: number };
+type OrderModel = { price: number; size: number; total: number; ratio: number };
 
 const orderAdapter = createEntityAdapter<Order>({
-  selectId: (order) => order[0],
-  sortComparer: (a, b) => a[0] - b[0],
+  selectId: (order) => order.price,
+  sortComparer: (a, b) => a.price - b.price,
 });
+
+const { selectAll } = orderAdapter.getSelectors();
 
 const pruneEmptyOrders = (list: EntityState<Order>) => {
   const ids = list.ids.filter((id) => {
     const o = list.entities[id];
-    return o && o[1] === 0;
+    return o && o.size === 0;
   });
 
   orderAdapter.removeMany(list, ids);
+};
+
+const getOrderObjects = (list: OrderTuple[]): Order[] => {
+  return list.map((o) => ({ price: o[0], size: o[1] }));
 };
 
 interface OrderState {
@@ -40,13 +48,17 @@ const ordersSlice = createSlice({
   name: 'orders',
   initialState,
   reducers: {
-    setSnapshot: (state, action: PayloadAction<{ bids: Order[]; asks: Order[] }>) => {
-      orderAdapter.setAll(state.bids, action.payload.bids);
+    setSnapshot: (state, action: PayloadAction<{ bids: OrderTuple[]; asks: OrderTuple[] }>) => {
+      orderAdapter.setAll(state.bids, getOrderObjects(action.payload.bids));
+      orderAdapter.setAll(state.asks, getOrderObjects(action.payload.asks));
       pruneEmptyOrders(state.bids);
+      pruneEmptyOrders(state.asks);
     },
-    updateDelta: (state, action: PayloadAction<{ bids: Order[]; asks: Order[] }>) => {
-      orderAdapter.upsertMany(state.bids, action.payload.bids);
+    updateDelta: (state, action: PayloadAction<{ bids: OrderTuple[]; asks: OrderTuple[] }>) => {
+      orderAdapter.upsertMany(state.bids, getOrderObjects(action.payload.bids));
+      orderAdapter.upsertMany(state.asks, getOrderObjects(action.payload.asks));
       pruneEmptyOrders(state.bids);
+      pruneEmptyOrders(state.asks);
     },
   },
   extraReducers: (builder) => {
@@ -74,18 +86,36 @@ export const toggleContract = createAsyncThunk<Contract, { sendMessage: (x: stri
   }
 );
 
-function orderIsDefined(x: Order | undefined): x is Order {
-  return !!x;
-}
+export const selector = (state: OrderState) => {
+  let max = 0;
+  const bidList = selectAll(state.bids).slice(0, 10);
+  const askList = selectAll(state.asks).slice(0, 10);
 
-export const ordersSelector = (orders: EntityState<Order>) => {
-  return Object.values(orders.entities)
-    .filter(orderIsDefined)
-    .slice(0, 20)
-    .reduce((obj, item, i) => {
-      const prev = i > 0 ? obj[i - 1].total : 0;
-      return [...obj, { price: item[0], size: item[1], total: prev + item[1] }];
+  bidList.reduce((total, item) => {
+    const t = total + item.size;
+    max = Math.max(max, t);
+    return t;
+  }, 0);
+
+  askList.reduce((total, item) => {
+    const t = total + item.size;
+    max = Math.max(max, t);
+    return t;
+  }, 0);
+
+  const ordersSelector = (list: Order[]) => {
+    return list.reduce((arr, item, i) => {
+      const { price, size } = item;
+      const runningTotal = i > 0 ? arr[i - 1].total : 0;
+      const total = runningTotal + size;
+      return [...arr, { price, size, total, ratio: total / max }];
     }, [] as OrderModel[]);
+  };
+
+  return {
+    bids: ordersSelector(bidList),
+    asks: ordersSelector(askList),
+  };
 };
 
 export const { setSnapshot, updateDelta } = ordersSlice.actions;

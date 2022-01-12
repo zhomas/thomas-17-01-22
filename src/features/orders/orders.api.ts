@@ -1,20 +1,20 @@
-type Order = [price: number, size: number];
+import { OrderTuple } from './orders.slice';
 
 export type Contract = 'PI_XBTUSD' | 'PI_ETHUSD';
 
 interface Snapshot {
   numLevels: number;
   feed: string;
-  bids: Order[];
-  asks: Order[];
+  bids: OrderTuple[];
+  asks: OrderTuple[];
   product_id: Contract;
 }
 
 interface Delta {
   feed: string;
   product_id: Contract;
-  bids: Order[];
-  asks: Order[];
+  bids: OrderTuple[];
+  asks: OrderTuple[];
 }
 
 type APIResponse = Delta | Snapshot;
