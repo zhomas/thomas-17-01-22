@@ -1,38 +1,79 @@
-import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import {
+  createAsyncThunk,
+  createEntityAdapter,
+  createSlice,
+  EntityState,
+  PayloadAction,
+} from '@reduxjs/toolkit';
+import { createAppThunk } from '.';
 
+type Contract = 'PI_XBTUSD' | 'PI_ETHUSD';
 type Order = [price: number, size: number];
 
+const orderAdapter = createEntityAdapter<Order>({
+  selectId: (order) => order[0],
+  sortComparer: (a, b) => b[0] - a[0],
+});
+
+const pruneEmptyOrders = (list: EntityState<Order>) => {
+  const ids = list.ids.filter((id) => {
+    const o = list.entities[id];
+    return o && o[1] === 0;
+  });
+
+  orderAdapter.removeMany(list, ids);
+};
+
 interface OrderState {
-  bids: { [K: number]: number };
-  asks: { [K: number]: number };
+  bids: EntityState<Order>;
+  asks: EntityState<Order>;
+  contract: Contract;
 }
 
 const initialState: OrderState = {
-  bids: {},
-  asks: {},
+  bids: orderAdapter.getInitialState(),
+  asks: orderAdapter.getInitialState(),
+  contract: 'PI_XBTUSD',
 };
+
+export const changeContract = createAsyncThunk<Contract, { sendMessage: (x: string) => void }>(
+  'orders/changeContract',
+  ({ sendMessage }, { getState }) => {
+    const { contract } = getState() as OrderState;
+    const next = contract === 'PI_XBTUSD' ? 'PI_ETHUSD' : 'PI_XBTUSD';
+    const sub = { event: 'subscribe', feed: 'book_ui_1', product_ids: [next] };
+    const unsub = {
+      event: 'unsubscribe',
+      feed: 'book_ui_1',
+      product_ids: ['PI_XBTUSD', 'PI_ETHUSD'].filter((c) => c !== next),
+    };
+
+    sendMessage(JSON.stringify(sub));
+    sendMessage(JSON.stringify(unsub));
+
+    return next;
+  }
+);
 
 const ordersSlice = createSlice({
   name: 'orders',
   initialState,
   reducers: {
     setSnapshot: (state, action: PayloadAction<{ bids: Order[]; asks: Order[] }>) => {
-      const { bids, asks } = action.payload;
-      for (const bid of bids) {
-        const [price, size] = bid;
-        state.bids[price] = size;
-      }
+      orderAdapter.setAll(state.bids, action.payload.bids);
+      pruneEmptyOrders(state.bids);
     },
     updateDelta: (state, action: PayloadAction<{ bids: Order[]; asks: Order[] }>) => {
-      for (const bid of action.payload.bids) {
-        const [price, size] = bid;
-        state.bids[price] = size;
-      }
-
-      state.bids = Object.entries(state.bids)
-        .filter(([_, v]) => v > 0)
-        .reduce((acc, [k, v]) => ({ ...acc, [k]: v }), {});
+      orderAdapter.upsertMany(state.bids, action.payload.bids);
+      pruneEmptyOrders(state.bids);
     },
+  },
+  extraReducers: (builder) => {
+    builder.addCase(changeContract.fulfilled, (state, action) => {
+      state.contract = action.payload;
+      state.bids = orderAdapter.getInitialState();
+      state.asks = orderAdapter.getInitialState();
+    });
   },
 });
 

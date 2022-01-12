@@ -25,7 +25,6 @@ interface Snapshot {
 
 export const useWebsocketInstance = (opts: OrderListSubscribeOptions) => {
   const [ready, setReady] = useState(false);
-  const [count, setCount] = useState(0);
   const [instance, setInstance] = useState<WebSocket | null>(null);
 
   return {
@@ -51,6 +50,9 @@ export const useWebsocketInstance = (opts: OrderListSubscribeOptions) => {
     stop: () => {
       console.log(instance);
       instance?.close();
+    },
+    emit: (message: string) => {
+      instance?.send(message);
     },
   };
 };

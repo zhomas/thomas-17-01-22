@@ -4,14 +4,26 @@ import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 import reducer from './orders.slice';
-import { configureStore } from '@reduxjs/toolkit';
+import { AsyncThunkPayloadCreator, configureStore, createAsyncThunk } from '@reduxjs/toolkit';
 import { Provider } from 'react-redux';
 
 const store = configureStore({ reducer });
 
+type ThunkApiConfig = {
+  dispatch: AppDispatch;
+  state: RootState;
+};
+
 export type RootState = ReturnType<typeof reducer>;
 
 export type AppDispatch = typeof store.dispatch;
+
+export function createAppThunk<Returned = void, ThunkArg = void>(
+  typePrefix: string,
+  payloadCreator: AsyncThunkPayloadCreator<Returned, ThunkArg, ThunkApiConfig>
+) {
+  return createAsyncThunk<Returned, ThunkArg, ThunkApiConfig>(typePrefix, payloadCreator);
+}
 
 ReactDOM.render(
   <React.StrictMode>

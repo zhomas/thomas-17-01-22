@@ -4,7 +4,7 @@ import { Contract, useWebsocketInstance } from './hooks/useOrderList';
 import './App.css';
 import { connect, ConnectedProps } from 'react-redux';
 import { AppDispatch, RootState } from '.';
-import { setSnapshot, updateDelta } from './orders.slice';
+import { changeContract, setSnapshot, updateDelta } from './orders.slice';
 
 type Order = [price: number, size: number];
 
@@ -22,34 +22,22 @@ interface Snapshot {
   product_id: Contract;
 }
 
-type OrderDict = { [K: number]: number };
-
 type Props = ConnectedProps<typeof connector>;
 
-const App: React.FC<Props> = ({ updateSnapshot, updateDelta }) => {
-  const [bids, setBids] = useState<OrderDict>({});
-
-  const { ready, stop, start } = useWebsocketInstance({
+const App: React.FC<Props> = ({ onMessage, toggleFeed, contract }) => {
+  const { ready, stop, start, emit } = useWebsocketInstance({
     url: 'wss://www.cryptofacilities.com/ws/v1',
-    onMessage: (e) => {
-      const data: WSData = JSON.parse(e.data);
-      if (!('bids' in data && 'asks' in data)) return; // ignore
-
-      if ('numLevels' in data) {
-        // snapshot
-        updateSnapshot(data.bids);
-        return;
-      }
-
-      updateDelta(data.bids);
-
-      console.log(data);
-    },
+    onMessage,
   });
+
+  const handleToggleFeed = () => {
+    toggleFeed(emit);
+  };
 
   return (
     <div className="App">
       {ready ? <button onClick={stop}>Stop</button> : <button onClick={start}>Start</button>}
+      <button onClick={handleToggleFeed}> {contract} </button>
       <h1>Ready: {ready.toString()}</h1>
       {/* <h3>Bid count: {bids.length}</h3> */}
     </div>
@@ -57,18 +45,29 @@ const App: React.FC<Props> = ({ updateSnapshot, updateDelta }) => {
 };
 
 const mapState = (state: RootState) => {
-  return {};
+  return {
+    contract: state.contract,
+  };
 };
 
 const mapDispatch = (dispatch: AppDispatch) => {
   return {
-    updateSnapshot: (bids: Order[]) => {
-      const action = setSnapshot({ bids, asks: [] });
-      dispatch(action);
+    onMessage: (e: MessageEvent<any>) => {
+      const data: WSData = JSON.parse(e.data);
+      if (!('bids' in data && 'asks' in data)) return; // ignore
+
+      if ('numLevels' in data) {
+        // snapshot
+        const action = setSnapshot({ bids: data.bids, asks: [] });
+        dispatch(action);
+        return;
+      }
+
+      const act = updateDelta({ bids: data.bids, asks: [] });
+      dispatch(act);
     },
-    updateDelta: (bids: Order[]) => {
-      const action = updateDelta({ bids, asks: [] });
-      dispatch(action);
+    toggleFeed: (sendMessage: (s: string) => void) => {
+      dispatch(changeContract({ sendMessage }));
     },
   };
 };
