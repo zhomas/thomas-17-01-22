@@ -3,12 +3,12 @@ import { useWebsocketInstance } from '../../hooks/useWebsocket';
 import './App.css';
 import { connect, ConnectedProps } from 'react-redux';
 import { AppDispatch, RootState } from '../../';
-import { toggleContract, setSnapshot, updateDelta } from './orders.slice';
+import { toggleContract, setSnapshot, updateDelta, ordersSelector } from './orders.slice';
 import { getSubscribeMessage, isDeltaResponse, isSnapshotResponse } from './orders.api';
 
 type Props = ConnectedProps<typeof connector>;
 
-const Orders: React.FC<Props> = ({ onMessage, onOpen, toggleFeed, contract }) => {
+const Orders: React.FC<Props> = ({ onMessage, onOpen, toggleFeed, contract, orders }) => {
   const [hasFocus, setHasFocus] = useState(true);
 
   const { stop, start, emit, status } = useWebsocketInstance({
@@ -37,6 +37,8 @@ const Orders: React.FC<Props> = ({ onMessage, onOpen, toggleFeed, contract }) =>
     };
   }, []);
 
+  console.log(orders);
+
   return (
     <div className="App">
       {status > -1 && !hasFocus && <button onClick={handleResume}>Resume</button>}
@@ -48,6 +50,7 @@ const Orders: React.FC<Props> = ({ onMessage, onOpen, toggleFeed, contract }) =>
 
 const mapState = (state: RootState) => {
   return {
+    orders: ordersSelector(state.bids),
     contract: state.contract,
     onOpen: (ws: WebSocket) => {
       const subscribe = JSON.stringify(getSubscribeMessage(state.contract));

@@ -8,10 +8,11 @@ import {
 import { Contract, getSubscribeMessage, getUnsubscrbeMessage } from './orders.api';
 
 type Order = [price: number, size: number];
+type OrderModel = { price: number; size: number; total: number };
 
 const orderAdapter = createEntityAdapter<Order>({
   selectId: (order) => order[0],
-  sortComparer: (a, b) => b[0] - a[0],
+  sortComparer: (a, b) => a[0] - b[0],
 });
 
 const pruneEmptyOrders = (list: EntityState<Order>) => {
@@ -35,19 +36,6 @@ const initialState: OrderState = {
   contract: 'PI_XBTUSD',
 };
 
-export const toggleContract = createAsyncThunk<Contract, { sendMessage: (x: string) => void }>(
-  'orders/toggleContract',
-  ({ sendMessage }, { getState }) => {
-    const { contract } = getState() as OrderState;
-    const next = contract === 'PI_XBTUSD' ? 'PI_ETHUSD' : 'PI_XBTUSD';
-    const sub = JSON.stringify(getSubscribeMessage(next));
-    const unsub = JSON.stringify(getUnsubscrbeMessage(contract));
-    sendMessage(sub);
-    sendMessage(unsub);
-    return next;
-  }
-);
-
 const ordersSlice = createSlice({
   name: 'orders',
   initialState,
@@ -69,6 +57,36 @@ const ordersSlice = createSlice({
     });
   },
 });
+
+export const toggleContract = createAsyncThunk<Contract, { sendMessage: (x: string) => void }>(
+  'orders/toggleContract',
+  ({ sendMessage }, { getState }) => {
+    const { contract } = getState() as OrderState;
+
+    const next = contract === 'PI_XBTUSD' ? 'PI_ETHUSD' : 'PI_XBTUSD';
+    const subscribe = JSON.stringify(getSubscribeMessage(next));
+    const unsubscribe = JSON.stringify(getUnsubscrbeMessage(contract));
+
+    sendMessage(subscribe);
+    sendMessage(unsubscribe);
+
+    return next;
+  }
+);
+
+function orderIsDefined(x: Order | undefined): x is Order {
+  return !!x;
+}
+
+export const ordersSelector = (orders: EntityState<Order>) => {
+  return Object.values(orders.entities)
+    .filter(orderIsDefined)
+    .slice(0, 20)
+    .reduce((obj, item, i) => {
+      const prev = i > 0 ? obj[i - 1].total : 0;
+      return [...obj, { price: item[0], size: item[1], total: prev + item[1] }];
+    }, [] as OrderModel[]);
+};
 
 export const { setSnapshot, updateDelta } = ordersSlice.actions;
 
