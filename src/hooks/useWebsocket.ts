@@ -11,16 +11,16 @@ export const useWebsocketInstance = (opts: OrderListSubscribeOptions) => {
   const websocket = useRef<WebSocket | null>(null);
   const queue = useRef<string[]>([]);
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const next = queue.current.pop();
-      opts.onMessage(next);
-    }, opts.interval);
+  // useEffect(() => {
+  //   const interval = setInterval(() => {
+  //     const next = queue.current.pop();
+  //     opts.onMessage(next);
+  //   }, opts.interval);
 
-    return () => {
-      clearInterval(interval);
-    };
-  });
+  //   return () => {
+  //     clearInterval(interval);
+  //   };
+  // });
 
   return {
     status: websocket.current ? websocket.current.readyState : -1,
@@ -36,8 +36,8 @@ export const useWebsocketInstance = (opts: OrderListSubscribeOptions) => {
       };
 
       ws.onmessage = (e) => {
-        queue.current.push(JSON.parse(e.data));
-        //opts.onMessage(JSON.parse(e.data));
+        //queue.current.push(JSON.parse(e.data));
+        opts.onMessage(JSON.parse(e.data));
       };
 
       websocket.current = ws;

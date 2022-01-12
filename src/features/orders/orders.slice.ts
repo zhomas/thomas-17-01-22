@@ -11,7 +11,7 @@ import { Contract, getSubscribeMessage, getUnsubscrbeMessage } from './orders.ap
 export type OrderTuple = [price: number, size: number];
 
 type Order = { price: number; size: number };
-type OrderModel = { price: number; size: number; total: number; ratio: number };
+export type OrderModel = { price: number; size: number; total: number; ratio: number };
 
 const orderAdapter = createEntityAdapter<Order>({
   selectId: (order) => order.price,

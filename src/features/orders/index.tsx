@@ -5,15 +5,16 @@ import { connect, ConnectedProps } from 'react-redux';
 import { AppDispatch, AppState } from '../../';
 import { toggleContract, setSnapshot, updateDelta, derivedStateSelector } from './orders.slice';
 import { getSubscribeMessage, isDeltaResponse, isSnapshotResponse } from './orders.api';
+import StyledOrders from './orders.style';
 
 type Props = ConnectedProps<typeof connector>;
 
-const Orders: React.FC<Props> = ({ onMessage, onOpen, toggleFeed, contract }) => {
+const Orders: React.FC<Props> = ({ onMessage, onOpen, toggleFeed, contract, bids, asks }) => {
   const [hasFocus, setHasFocus] = useState(true);
 
   const { start, stop, emit, status } = useWebsocketInstance({
     url: 'wss://www.cryptofacilities.com/ws/v1',
-    interval: 250,
+    interval: 50,
     onMessage,
     onOpen,
   });
@@ -45,6 +46,7 @@ const Orders: React.FC<Props> = ({ onMessage, onOpen, toggleFeed, contract }) =>
       {status > -1 && !hasFocus && <button onClick={handleResume}>Resume</button>}
       <button onClick={handleToggleFeed}> {contract} </button>
       <h2>Status: {status}</h2>
+      <StyledOrders bids={bids} asks={asks} />
     </div>
   );
 };
