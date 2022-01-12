@@ -1,36 +1,28 @@
-import React from 'react';
+import React, { Dispatch } from 'react';
 import ReactDOM from 'react-dom';
 import './index.css';
 import reportWebVitals from './reportWebVitals';
 import reducer from './features/orders/orders.slice';
-import { AsyncThunkPayloadCreator, configureStore, createAsyncThunk } from '@reduxjs/toolkit';
+import {
+  AsyncThunkPayloadCreator,
+  configureStore,
+  createAsyncThunk,
+  Dictionary,
+  PayloadAction,
+} from '@reduxjs/toolkit';
 import { Provider } from 'react-redux';
 import OrderList from './features/orders';
 
 const store = configureStore({ reducer });
 
-type ThunkApiConfig = {
-  dispatch: AppDispatch;
-  state: RootState;
-};
-
-export type RootState = ReturnType<typeof reducer>;
+export type AppState = ReturnType<typeof reducer>;
 
 export type AppDispatch = typeof store.dispatch;
 
-export function createAppThunk<Returned = void, ThunkArg = void>(
-  typePrefix: string,
-  payloadCreator: AsyncThunkPayloadCreator<Returned, ThunkArg, ThunkApiConfig>
-) {
-  return createAsyncThunk<Returned, ThunkArg, ThunkApiConfig>(typePrefix, payloadCreator);
-}
-
 ReactDOM.render(
-  <React.StrictMode>
-    <Provider store={store}>
-      <OrderList />
-    </Provider>
-  </React.StrictMode>,
+  <Provider store={store}>
+    <OrderList />
+  </Provider>,
   document.getElementById('root')
 );
 

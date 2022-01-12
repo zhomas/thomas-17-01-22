@@ -2,8 +2,8 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useWebsocketInstance } from '../../hooks/useWebsocket';
 import './App.css';
 import { connect, ConnectedProps } from 'react-redux';
-import { AppDispatch, RootState } from '../../';
-import { toggleContract, setSnapshot, updateDelta, selector } from './orders.slice';
+import { AppDispatch, AppState } from '../../';
+import { toggleContract, setSnapshot, updateDelta, derivedStateSelector } from './orders.slice';
 import { getSubscribeMessage, isDeltaResponse, isSnapshotResponse } from './orders.api';
 
 type Props = ConnectedProps<typeof connector>;
@@ -11,23 +11,24 @@ type Props = ConnectedProps<typeof connector>;
 const Orders: React.FC<Props> = ({ onMessage, onOpen, toggleFeed, contract }) => {
   const [hasFocus, setHasFocus] = useState(true);
 
-  const { stop, start, emit, status } = useWebsocketInstance({
+  const { start, stop, emit, status } = useWebsocketInstance({
     url: 'wss://www.cryptofacilities.com/ws/v1',
+    interval: 250,
     onMessage,
     onOpen,
   });
 
   const handleToggleFeed = () => toggleFeed(emit);
 
-  const handleResume = useCallback(() => {
+  const handleResume = () => {
     setHasFocus(true);
     start();
-  }, []);
+  };
 
-  const onBlur = useCallback(() => {
+  const onBlur = () => {
     setHasFocus(false);
     stop();
-  }, []);
+  };
 
   useEffect(() => {
     start();
@@ -36,6 +37,8 @@ const Orders: React.FC<Props> = ({ onMessage, onOpen, toggleFeed, contract }) =>
       window.removeEventListener('blur', onBlur);
     };
   }, []);
+
+  console.log('render');
 
   return (
     <div className="App">
@@ -46,11 +49,9 @@ const Orders: React.FC<Props> = ({ onMessage, onOpen, toggleFeed, contract }) =>
   );
 };
 
-const mapState = (state: RootState) => {
-  const x = selector(state);
-  console.log(x);
+const mapState = (state: AppState) => {
   return {
-    contract: state.contract,
+    ...derivedStateSelector(state),
     onOpen: (ws: WebSocket) => {
       const subscribe = JSON.stringify(getSubscribeMessage(state.contract));
       ws.send(subscribe);

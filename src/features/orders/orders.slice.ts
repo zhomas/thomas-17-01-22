@@ -5,6 +5,7 @@ import {
   EntityState,
   PayloadAction,
 } from '@reduxjs/toolkit';
+import _ from 'lodash';
 import { Contract, getSubscribeMessage, getUnsubscrbeMessage } from './orders.api';
 
 export type OrderTuple = [price: number, size: number];
@@ -86,35 +87,50 @@ export const toggleContract = createAsyncThunk<Contract, { sendMessage: (x: stri
   }
 );
 
-export const selector = (state: OrderState) => {
-  let max = 0;
+export const derivedStateSelector = (state: OrderState) => {
   const bidList = selectAll(state.bids).slice(0, 10);
   const askList = selectAll(state.asks).slice(0, 10);
+  let maxTotal = 0;
 
   bidList.reduce((total, item) => {
     const t = total + item.size;
-    max = Math.max(max, t);
+    maxTotal = Math.max(maxTotal, t);
     return t;
   }, 0);
 
   askList.reduce((total, item) => {
     const t = total + item.size;
-    max = Math.max(max, t);
+    maxTotal = Math.max(maxTotal, t);
     return t;
   }, 0);
 
-  const ordersSelector = (list: Order[]) => {
+  const getOrdersModel = (list: Order[]) => {
     return list.reduce((arr, item, i) => {
       const { price, size } = item;
       const runningTotal = i > 0 ? arr[i - 1].total : 0;
       const total = runningTotal + size;
-      return [...arr, { price, size, total, ratio: total / max }];
+      return [...arr, { price, size, total, ratio: total / maxTotal }];
     }, [] as OrderModel[]);
   };
 
+  const getSpread = () => {
+    if (!bidList.length) return 0;
+    if (!askList.length) return 0;
+    return Math.abs(bidList[0].price - askList[0].price);
+  };
+
+  const getSpreadRatio = () => {
+    if (!bidList.length) return 0;
+    if (!askList.length) return 0;
+    return getSpread() / bidList[0].price;
+  };
+
   return {
-    bids: ordersSelector(bidList),
-    asks: ordersSelector(askList),
+    contract: state.contract,
+    bids: getOrdersModel(bidList),
+    asks: getOrdersModel(askList),
+    spread: getSpread(),
+    spreadRatio: getSpreadRatio(),
   };
 };
 
