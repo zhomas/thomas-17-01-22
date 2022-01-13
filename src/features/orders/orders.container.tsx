@@ -2,36 +2,31 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useWebsocketInstance } from '../../hooks/useWebsocket';
 import './App.css';
 import { connect, ConnectedProps } from 'react-redux';
-import { AppDispatch, AppState } from '../../';
+import { AppDispatch, AppState } from '../..';
 import {
   toggleContract,
   setSnapshot,
   updateDelta,
-  derivedStateSelector,
   orderbookSelector,
+  obSelector,
+  tick,
 } from './orders.slice';
 import { getSubscribeMessage, isDeltaResponse, isSnapshotResponse } from './orders.api';
-import StyledOrders from './orders.style';
+import StyledOrders from './orders.main';
 
 type Props = ConnectedProps<typeof connector>;
 
-const Orders: React.FC<Props> = ({
-  onMessage,
-  onOpen,
-  toggleFeed,
-  bids,
-  asks,
-  spread,
-  spreadPercent,
-  getRatio,
-}) => {
+const OrdersContainer: React.FC<Props> = ({ onMessage, toggleFeed, refresh }) => {
   const [hasFocus, setHasFocus] = useState(true);
 
   const { start, stop, emit, status } = useWebsocketInstance({
     url: 'wss://www.cryptofacilities.com/ws/v1',
     interval: 50,
     onMessage,
-    onOpen,
+    onOpen: (ws: WebSocket) => {
+      const subscribe = JSON.stringify(getSubscribeMessage('PI_XBTUSD'));
+      ws.send(subscribe);
+    },
   });
 
   const handleToggleFeed = () => toggleFeed(emit);
@@ -54,17 +49,19 @@ const Orders: React.FC<Props> = ({
     };
   }, []);
 
-  console.log('render');
+  useEffect(() => {
+    const interval = setInterval(() => {
+      refresh();
+    }, 300);
+
+    return () => {
+      clearInterval(interval);
+    };
+  });
 
   return (
     <div className="App">
-      <StyledOrders
-        bids={bids}
-        asks={asks}
-        getRatio={getRatio}
-        spread={spread}
-        spreadPercent={spreadPercent}
-      />
+      <StyledOrders />
       {status > -1 && !hasFocus && <button onClick={handleResume}>Resume</button>}
       <button onClick={handleToggleFeed}> Switch Currency </button>
       <h2>Status: {status}</h2>
@@ -72,17 +69,11 @@ const Orders: React.FC<Props> = ({
   );
 };
 
-const mapState = (state: AppState) => {
-  return {
-    ...orderbookSelector(state),
-    onOpen: (ws: WebSocket) => {
-      const subscribe = JSON.stringify(getSubscribeMessage(state.contract));
-      ws.send(subscribe);
-    },
-  };
-};
-
 const mapDispatch = (dispatch: AppDispatch) => ({
+  refresh: () => {
+    dispatch(tick());
+  },
+
   onMessage: (data: unknown) => {
     if (isSnapshotResponse(data)) {
       const { bids, asks } = data;
@@ -103,6 +94,6 @@ const mapDispatch = (dispatch: AppDispatch) => ({
   },
 });
 
-const connector = connect(mapState, mapDispatch);
+const connector = connect(undefined, mapDispatch);
 
-export default connect(mapState, mapDispatch)(Orders);
+export default connector(OrdersContainer);

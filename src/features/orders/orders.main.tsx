@@ -1,6 +1,9 @@
 import React, { FC } from 'react';
 import styled from 'styled-components';
-import { OrderBook, OrderModel } from './orders.slice';
+import { obSelector, OrderBook, OrderModel } from './orders.slice';
+import { connect, ConnectedProps } from 'react-redux';
+
+import { AppState } from '../..';
 
 const Row = styled.div`
   display: flex;
@@ -128,8 +131,12 @@ const Asks = styled.div`
   }
 `;
 
-const Orders: FC<OrderBook> = (props) => {
-  const { bids, asks, spread, spreadPercent, getRatio } = props;
+type Props = ConnectedProps<typeof connector>;
+
+const Orders: FC<Props> = ({ orderbook }) => {
+  const { bids, asks, spread, spreadPercent, getRatio } = orderbook;
+
+  console.log('render');
 
   return (
     <Container>
@@ -174,4 +181,12 @@ const Orders: FC<OrderBook> = (props) => {
   );
 };
 
-export default Orders;
+const mapState = (state: AppState) => {
+  return {
+    orderbook: obSelector(state),
+  };
+};
+
+const connector = connect(mapState);
+
+export default connector(Orders);

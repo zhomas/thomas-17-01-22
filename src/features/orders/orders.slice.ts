@@ -1,6 +1,7 @@
 import {
   createAsyncThunk,
   createEntityAdapter,
+  createSelector,
   createSlice,
   EntityState,
   PayloadAction,
@@ -37,18 +38,34 @@ interface OrderState {
   bids: EntityState<Order>;
   asks: EntityState<Order>;
   contract: Contract;
+  lastUpdateTime: number;
+  tickInterval: number;
+  stashedBids: OrderTuple[];
+  stashedAsks: OrderTuple[];
 }
 
 const initialState: OrderState = {
   bids: orderAdapter.getInitialState(),
   asks: orderAdapter.getInitialState(),
+  stashedBids: [],
+  stashedAsks: [],
   contract: 'PI_XBTUSD',
+  lastUpdateTime: -1,
+  tickInterval: 1000,
 };
 
 const ordersSlice = createSlice({
   name: 'orders',
   initialState,
   reducers: {
+    tick: (state) => {
+      orderAdapter.upsertMany(state.bids, getOrderObjects(state.stashedBids));
+      orderAdapter.upsertMany(state.asks, getOrderObjects(state.stashedAsks));
+      state.stashedBids = [];
+      state.stashedAsks = [];
+      pruneEmptyOrders(state.bids);
+      pruneEmptyOrders(state.asks);
+    },
     setSnapshot: (state, action: PayloadAction<{ bids: OrderTuple[]; asks: OrderTuple[] }>) => {
       orderAdapter.setAll(state.bids, getOrderObjects(action.payload.bids));
       orderAdapter.setAll(state.asks, getOrderObjects(action.payload.asks));
@@ -56,10 +73,8 @@ const ordersSlice = createSlice({
       pruneEmptyOrders(state.asks);
     },
     updateDelta: (state, action: PayloadAction<{ bids: OrderTuple[]; asks: OrderTuple[] }>) => {
-      orderAdapter.upsertMany(state.bids, getOrderObjects(action.payload.bids));
-      orderAdapter.upsertMany(state.asks, getOrderObjects(action.payload.asks));
-      pruneEmptyOrders(state.bids);
-      pruneEmptyOrders(state.asks);
+      state.stashedBids.push(...action.payload.bids);
+      state.stashedAsks.push(...action.payload.asks);
     },
   },
   extraReducers: (builder) => {
@@ -104,6 +119,78 @@ export interface OrderBook {
   spread: string;
   spreadPercent: string;
 }
+
+const bidsSelector = (state: OrderState) => state.bids;
+const asksSelector = (state: OrderState) => state.asks;
+
+export const obSelector = createSelector(
+  bidsSelector,
+  asksSelector,
+  (bidObj, askObj): OrderBook => {
+    const bidList = selectAll(bidObj);
+    const askList = selectAll(askObj).reverse();
+
+    const levels = Math.min(bidList.length, askList.length, 16);
+
+    if (!levels) {
+      return {
+        getRatio: (o) => 0,
+        bids: [],
+        asks: [],
+        spread: '',
+        spreadPercent: '',
+      };
+    }
+
+    const bids: SingleOrder[] = [];
+    const asks: SingleOrder[] = [];
+
+    let bidsTotal = 0;
+    let asksTotal = 0;
+
+    for (let i = 0; i < levels; i++) {
+      const bid = bidList[i];
+      const ask = askList[i];
+
+      bids.push({
+        price: bid.price,
+        size: bid.size,
+        level: i + 1,
+        total: bidsTotal + bid.size,
+        displayTotal: (bidsTotal + bid.size).toLocaleString(),
+        displaySize: bid.size.toLocaleString(),
+        displayPrice: bid.price.toFixed(2).toLocaleString(),
+      });
+
+      asks.push({
+        price: ask.price,
+        size: ask.size,
+        level: i + 1,
+        total: asksTotal + ask.size,
+        displayTotal: (asksTotal + ask.size).toLocaleString(),
+        displaySize: ask.size.toLocaleString(),
+        displayPrice: ask.price.toFixed(2).toLocaleString(),
+      });
+
+      bidsTotal += bid.size;
+      asksTotal += ask.size;
+    }
+
+    const maxTotal = Math.max(asksTotal, bidsTotal);
+
+    const spread = Math.abs(bids[0].price - asks[0].price);
+
+    console.log({ spread, spreadPercent: (spread / bids[0].price) * 100 });
+
+    return {
+      getRatio: (o) => o.total / maxTotal,
+      bids,
+      asks,
+      spread: spread.toFixed(1).toLocaleString(),
+      spreadPercent: ((spread / bids[0].price) * 100).toFixed(2),
+    };
+  }
+);
 
 export const orderbookSelector = (state: OrderState): OrderBook => {
   const bidList = selectAll(state.bids);
@@ -169,53 +256,6 @@ export const orderbookSelector = (state: OrderState): OrderBook => {
   };
 };
 
-export const derivedStateSelector = (state: OrderState) => {
-  const bidList = selectAll(state.bids).slice(0, 16);
-  const askList = selectAll(state.asks).slice(0, 16);
-  let maxTotal = 0;
-
-  bidList.reduce((total, item) => {
-    const t = total + item.size;
-    maxTotal = Math.max(maxTotal, t);
-    return t;
-  }, 0);
-
-  askList.reduce((total, item) => {
-    const t = total + item.size;
-    maxTotal = Math.max(maxTotal, t);
-    return t;
-  }, 0);
-
-  const getOrdersModel = (list: Order[]) => {
-    return list.reduce((arr, item, i) => {
-      const { price, size } = item;
-      const runningTotal = i > 0 ? arr[i - 1].total : 0;
-      const total = runningTotal + size;
-      return [...arr, { price, size, total, ratio: total / maxTotal }];
-    }, [] as OrderModel[]);
-  };
-
-  const getSpread = () => {
-    if (!bidList.length) return 0;
-    if (!askList.length) return 0;
-    return Math.abs(bidList[0].price - askList[0].price);
-  };
-
-  const getSpreadRatio = () => {
-    if (!bidList.length) return 0;
-    if (!askList.length) return 0;
-    return getSpread() / bidList[0].price;
-  };
-
-  return {
-    contract: state.contract,
-    bids: getOrdersModel(bidList),
-    asks: getOrdersModel(askList),
-    spread: getSpread(),
-    spreadRatio: getSpreadRatio(),
-  };
-};
-
-export const { setSnapshot, updateDelta } = ordersSlice.actions;
+export const { setSnapshot, updateDelta, tick } = ordersSlice.actions;
 
 export default ordersSlice.reducer;

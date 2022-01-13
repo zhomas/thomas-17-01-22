@@ -4,7 +4,7 @@ import reportWebVitals from './reportWebVitals';
 import reducer from './features/orders/orders.slice';
 import { configureStore } from '@reduxjs/toolkit';
 import { Provider } from 'react-redux';
-import OrderList from './features/orders';
+import OrderList from './features/orders/orders.container';
 
 const store = configureStore({ reducer });
 
