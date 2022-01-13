@@ -7,6 +7,18 @@ const Row = styled.div`
   position: relative;
   z-index: 0;
   text-align: right;
+  padding-right: 10vw;
+  padding-top: 3px;
+  padding-bottom: 3px;
+`;
+
+const HeadingRow = styled(Row)`
+  text-transform: uppercase;
+  color: #474d5a;
+
+  @media only screen and (min-width: 768px) {
+    border-bottom: 1px solid #232b38;
+  }
 `;
 
 const RatioBar = styled.div`
@@ -22,57 +34,73 @@ const RatioBar = styled.div`
 `;
 
 const BidsBar = styled(RatioBar)`
-  background: #084800;
-  @media only screen and (min-width: 992px) {
+  background: #123534;
+  @media only screen and (min-width: 768px) {
     transform-origin: right;
   }
 `;
 
 const AsksBar = styled(RatioBar)`
-  background: red;
+  background: #3d1e28;
 `;
 
 const Cell = styled.span`
   flex: 0 0 33.3%;
 `;
 
-const OrderList = styled.div`
-  flex: 1;
-  text-align: right;
+const CellPrice = styled(Cell)`
+  font-weight: 600;
 `;
 
 const Container = styled.div`
   display: grid;
-
+  background: #111827;
   grid-gap: 0em 0em;
   min-height: 200px;
   grid-template-columns: 1fr;
-  grid-template-rows: 1fr 20px 1fr;
+  grid-template-rows: fit-content 20px fit-content;
 
-  @media only screen and (min-width: 992px) {
+  @media only screen and (min-width: 768px) {
     grid-template-columns: 1fr 1fr;
-    grid-template-rows: 20px 1fr;
+    grid-template-rows: fit-content 1fr;
   }
 `;
 
 const DataSet = styled.div`
   display: flex;
   flex-direction: column;
+  font-family: 'IBM Plex Mono', monospace;
+  font-weight: 400;
 `;
 
 const Spread = styled.div`
-  background: #404040;
+  padding: 5px;
   grid-area: 2 / 1 / 3 / 2;
-  @media only screen and (min-width: 992px) {
+  color: #474d5a;
+
+  @media only screen and (min-width: 768px) {
     grid-area: 1 / 1 / 2 / 3;
+    border-bottom: 1px solid #232b38;
   }
 `;
 
 const Bids = styled.div`
-  background: green;
   grid-area: 3 / 1 / 4 / 2;
-  @media only screen and (min-width: 992px) {
+
+  ${HeadingRow} {
+    display: none;
+  }
+
+  ${CellPrice} {
+    color: #6ec877;
+  }
+
+  @media only screen and (min-width: 768px) {
     grid-area: 2 / 1 / 3 / 2;
+
+    ${HeadingRow} {
+      display: flex;
+    }
 
     ${Row} {
       flex-direction: row-reverse;
@@ -81,14 +109,17 @@ const Bids = styled.div`
 `;
 
 const Asks = styled.div`
-  background: salmon;
   grid-area: 1 / 1 / 2 / 2;
 
   ${DataSet} {
     flex-direction: column-reverse;
   }
 
-  @media only screen and (min-width: 992px) {
+  ${CellPrice} {
+    color: #e2444d;
+  }
+
+  @media only screen and (min-width: 768px) {
     grid-area: 2 / 2 / 3 / 3;
 
     ${DataSet} {
@@ -98,84 +129,47 @@ const Asks = styled.div`
 `;
 
 const Orders: FC<OrderBook> = (props) => {
-  const { bids, asks, maxTotal } = props;
+  const { bids, asks, getRatio } = props;
 
   return (
     <Container>
       <Spread>Spread</Spread>
       <Bids>
-        <Row>Bids</Row>
-        <Row>
+        <HeadingRow>
           <Cell>Price</Cell>
           <Cell>Size</Cell>
           <Cell>Total</Cell>
-        </Row>
+        </HeadingRow>
         <DataSet>
           {bids.map((bid) => (
-            <Row>
-              <Cell>{bid.price}</Cell>
+            <Row key={bid.level}>
+              <CellPrice>{bid.price}</CellPrice>
               <Cell>{bid.size}</Cell>
               <Cell>{bid.total}</Cell>
-              <BidsBar style={{ transform: `scaleX(${bid.total / maxTotal})` }} />
+              <BidsBar style={{ transform: `scaleX(${getRatio(bid)})` }} />
             </Row>
           ))}
         </DataSet>
       </Bids>
       <Asks>
-        <Row>Asks</Row>
-        <Row>
+        <HeadingRow>
           <Cell>Price</Cell>
           <Cell>Size</Cell>
           <Cell>Total</Cell>
-        </Row>
+        </HeadingRow>
         <DataSet>
           {asks.map((ask) => (
-            <Row>
-              <Cell>{ask.price}</Cell>
+            <Row key={ask.level}>
+              <CellPrice>{ask.price}</CellPrice>
               <Cell>{ask.size}</Cell>
               <Cell>{ask.total}</Cell>
-              <AsksBar style={{ transform: `scaleX(${ask.total / maxTotal})` }} />
+              <AsksBar style={{ transform: `scaleX(${getRatio(ask)})` }} />
             </Row>
           ))}
         </DataSet>
       </Asks>
     </Container>
   );
-
-  // return (
-  //   <Container>
-  //     <BidsList>
-  //       <Row>
-  //         <Cell>Total</Cell>
-  //         <Cell>Size</Cell>
-  //         <PriceCell>Price</PriceCell>
-  //       </Row>
-  //       {bids.map((bid) => (
-  //         <Row key={bid.price}>
-  //           <Cell>{bid.total}</Cell>
-  //           <Cell>{bid.size}</Cell>
-  //           <PriceCell>{bid.price}</PriceCell>
-  //           <BidsBar style={{ transform: `scaleX(${bid.ratio})` }} />
-  //         </Row>
-  //       ))}
-  //     </BidsList>
-  //     <AsksList>
-  //       <Row>
-  //         <Cell>Total</Cell>
-  //         <Cell>Size</Cell>
-  //         <PriceCell>Price</PriceCell>
-  //       </Row>
-  //       {asks.map((bid) => (
-  //         <Row key={bid.price}>
-  //           <Cell>{bid.total}</Cell>
-  //           <Cell>{bid.size}</Cell>
-  //           <PriceCell>{bid.price}</PriceCell>
-  //           <AsksBar style={{ transform: `scaleX(${bid.ratio})` }} />
-  //         </Row>
-  //       ))}
-  //     </AsksList>
-  //   </Container>
-  // );
 };
 
 export default Orders;

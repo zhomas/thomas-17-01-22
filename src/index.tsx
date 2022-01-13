@@ -1,15 +1,8 @@
-import React, { Dispatch } from 'react';
 import ReactDOM from 'react-dom';
 import './index.css';
 import reportWebVitals from './reportWebVitals';
 import reducer from './features/orders/orders.slice';
-import {
-  AsyncThunkPayloadCreator,
-  configureStore,
-  createAsyncThunk,
-  Dictionary,
-  PayloadAction,
-} from '@reduxjs/toolkit';
+import { configureStore } from '@reduxjs/toolkit';
 import { Provider } from 'react-redux';
 import OrderList from './features/orders';
 

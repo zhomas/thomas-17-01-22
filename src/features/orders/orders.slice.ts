@@ -95,7 +95,7 @@ interface SingleOrder {
 }
 
 export interface OrderBook {
-  maxTotal: number;
+  getRatio: (o: SingleOrder) => number;
   bids: SingleOrder[];
   asks: SingleOrder[];
 }
@@ -133,8 +133,10 @@ export const orderbookSelector = (state: OrderState): OrderBook => {
     asksTotal += ask.size;
   }
 
+  const maxTotal = Math.max(asksTotal, bidsTotal);
+
   return {
-    maxTotal: Math.max(bidsTotal, asksTotal),
+    getRatio: (o) => o.total / maxTotal,
     bids,
     asks,
   };
