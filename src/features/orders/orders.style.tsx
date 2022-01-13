@@ -129,11 +129,13 @@ const Asks = styled.div`
 `;
 
 const Orders: FC<OrderBook> = (props) => {
-  const { bids, asks, getRatio } = props;
+  const { bids, asks, spread, spreadPercent, getRatio } = props;
 
   return (
     <Container>
-      <Spread>Spread</Spread>
+      <Spread>
+        Spread: {spread} ({spreadPercent}%)
+      </Spread>
       <Bids>
         <HeadingRow>
           <Cell>Price</Cell>
@@ -143,9 +145,9 @@ const Orders: FC<OrderBook> = (props) => {
         <DataSet>
           {bids.map((bid) => (
             <Row key={bid.level}>
-              <CellPrice>{bid.price}</CellPrice>
-              <Cell>{bid.size}</Cell>
-              <Cell>{bid.total}</Cell>
+              <CellPrice>{bid.displayPrice}</CellPrice>
+              <Cell>{bid.displaySize}</Cell>
+              <Cell>{bid.displayTotal}</Cell>
               <BidsBar style={{ transform: `scaleX(${getRatio(bid)})` }} />
             </Row>
           ))}
@@ -160,9 +162,9 @@ const Orders: FC<OrderBook> = (props) => {
         <DataSet>
           {asks.map((ask) => (
             <Row key={ask.level}>
-              <CellPrice>{ask.price}</CellPrice>
-              <Cell>{ask.size}</Cell>
-              <Cell>{ask.total}</Cell>
+              <CellPrice>{ask.displayPrice}</CellPrice>
+              <Cell>{ask.displaySize}</Cell>
+              <Cell>{ask.displayTotal}</Cell>
               <AsksBar style={{ transform: `scaleX(${getRatio(ask)})` }} />
             </Row>
           ))}

@@ -92,18 +92,33 @@ interface SingleOrder {
   size: number;
   level: number;
   total: number;
+  displayPrice: string;
+  displayTotal: string;
+  displaySize: string;
 }
 
 export interface OrderBook {
   getRatio: (o: SingleOrder) => number;
   bids: SingleOrder[];
   asks: SingleOrder[];
+  spread: string;
+  spreadPercent: string;
 }
 
 export const orderbookSelector = (state: OrderState): OrderBook => {
   const bidList = selectAll(state.bids);
   const askList = selectAll(state.asks).reverse();
   const levels = Math.min(bidList.length, askList.length, 16);
+
+  if (!levels) {
+    return {
+      getRatio: (o) => 0,
+      bids: [],
+      asks: [],
+      spread: '',
+      spreadPercent: '',
+    };
+  }
 
   const bids: SingleOrder[] = [];
   const asks: SingleOrder[] = [];
@@ -120,6 +135,9 @@ export const orderbookSelector = (state: OrderState): OrderBook => {
       size: bid.size,
       level: i + 1,
       total: bidsTotal + bid.size,
+      displayTotal: (bidsTotal + bid.size).toLocaleString(),
+      displaySize: bid.size.toLocaleString(),
+      displayPrice: bid.price.toFixed(2).toLocaleString(),
     });
 
     asks.push({
@@ -127,6 +145,9 @@ export const orderbookSelector = (state: OrderState): OrderBook => {
       size: ask.size,
       level: i + 1,
       total: asksTotal + ask.size,
+      displayTotal: (asksTotal + bid.size).toLocaleString(),
+      displaySize: ask.size.toLocaleString(),
+      displayPrice: bid.price.toFixed(2).toLocaleString(),
     });
 
     bidsTotal += bid.size;
@@ -135,10 +156,16 @@ export const orderbookSelector = (state: OrderState): OrderBook => {
 
   const maxTotal = Math.max(asksTotal, bidsTotal);
 
+  const spread = Math.abs(bids[0].price - asks[0].price);
+
+  console.log({ spread, spreadPercent: (spread / bids[0].price) * 100 });
+
   return {
     getRatio: (o) => o.total / maxTotal,
     bids,
     asks,
+    spread: spread.toFixed(1).toLocaleString(),
+    spreadPercent: ((spread / bids[0].price) * 100).toFixed(2),
   };
 };
 

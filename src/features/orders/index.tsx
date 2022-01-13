@@ -15,7 +15,16 @@ import StyledOrders from './orders.style';
 
 type Props = ConnectedProps<typeof connector>;
 
-const Orders: React.FC<Props> = ({ onMessage, onOpen, toggleFeed, bids, asks, getRatio }) => {
+const Orders: React.FC<Props> = ({
+  onMessage,
+  onOpen,
+  toggleFeed,
+  bids,
+  asks,
+  spread,
+  spreadPercent,
+  getRatio,
+}) => {
   const [hasFocus, setHasFocus] = useState(true);
 
   const { start, stop, emit, status } = useWebsocketInstance({
@@ -49,7 +58,13 @@ const Orders: React.FC<Props> = ({ onMessage, onOpen, toggleFeed, bids, asks, ge
 
   return (
     <div className="App">
-      <StyledOrders bids={bids} asks={asks} getRatio={getRatio} />
+      <StyledOrders
+        bids={bids}
+        asks={asks}
+        getRatio={getRatio}
+        spread={spread}
+        spreadPercent={spreadPercent}
+      />
       {status > -1 && !hasFocus && <button onClick={handleResume}>Resume</button>}
       <button onClick={handleToggleFeed}> Switch Currency </button>
       <h2>Status: {status}</h2>
