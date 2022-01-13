@@ -88,8 +88,8 @@ export const toggleContract = createAsyncThunk<Contract, { sendMessage: (x: stri
 );
 
 export const derivedStateSelector = (state: OrderState) => {
-  const bidList = selectAll(state.bids).slice(0, 10);
-  const askList = selectAll(state.asks).slice(0, 10);
+  const bidList = selectAll(state.bids).slice(0, 16);
+  const askList = selectAll(state.asks).slice(0, 16);
   let maxTotal = 0;
 
   bidList.reduce((total, item) => {
