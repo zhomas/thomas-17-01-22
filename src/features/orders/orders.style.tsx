@@ -1,11 +1,6 @@
 import React, { FC } from 'react';
 import styled from 'styled-components';
-import { OrderModel } from './orders.slice';
-
-interface Props {
-  bids: OrderModel[];
-  asks: OrderModel[];
-}
+import { OrderBook, OrderModel } from './orders.slice';
 
 const Row = styled.div`
   display: flex;
@@ -23,16 +18,18 @@ const RatioBar = styled.div`
   bottom: 0;
   left: 0;
   z-index: -1;
+  transform-origin: left;
 `;
 
 const BidsBar = styled(RatioBar)`
-  background: #6c0000;
-  transform-origin: right;
+  background: #084800;
+  @media only screen and (min-width: 992px) {
+    transform-origin: right;
+  }
 `;
 
 const AsksBar = styled(RatioBar)`
-  background: #084800;
-  transform-origin: left;
+  background: red;
 `;
 
 const Cell = styled.span`
@@ -58,6 +55,11 @@ const Container = styled.div`
   }
 `;
 
+const DataSet = styled.div`
+  display: flex;
+  flex-direction: column;
+`;
+
 const Spread = styled.div`
   background: #404040;
   grid-area: 2 / 1 / 3 / 2;
@@ -81,13 +83,22 @@ const Bids = styled.div`
 const Asks = styled.div`
   background: salmon;
   grid-area: 1 / 1 / 2 / 2;
+
+  ${DataSet} {
+    flex-direction: column-reverse;
+  }
+
   @media only screen and (min-width: 992px) {
     grid-area: 2 / 2 / 3 / 3;
+
+    ${DataSet} {
+      flex-direction: column;
+    }
   }
 `;
 
-const Orders: FC<Props> = (props) => {
-  const { bids, asks } = props;
+const Orders: FC<OrderBook> = (props) => {
+  const { bids, asks, maxTotal } = props;
 
   return (
     <Container>
@@ -99,13 +110,16 @@ const Orders: FC<Props> = (props) => {
           <Cell>Size</Cell>
           <Cell>Total</Cell>
         </Row>
-        {bids.map((bid) => (
-          <Row>
-            <Cell>{bid.price}</Cell>
-            <Cell>Size</Cell>
-            <Cell>Total</Cell>
-          </Row>
-        ))}
+        <DataSet>
+          {bids.map((bid) => (
+            <Row>
+              <Cell>{bid.price}</Cell>
+              <Cell>{bid.size}</Cell>
+              <Cell>{bid.total}</Cell>
+              <BidsBar style={{ transform: `scaleX(${bid.total / maxTotal})` }} />
+            </Row>
+          ))}
+        </DataSet>
       </Bids>
       <Asks>
         <Row>Asks</Row>
@@ -114,13 +128,16 @@ const Orders: FC<Props> = (props) => {
           <Cell>Size</Cell>
           <Cell>Total</Cell>
         </Row>
-        {asks.map((ask) => (
-          <Row>
-            <Cell>{ask.price}</Cell>
-            <Cell>Size</Cell>
-            <Cell>Total</Cell>
-          </Row>
-        ))}
+        <DataSet>
+          {asks.map((ask) => (
+            <Row>
+              <Cell>{ask.price}</Cell>
+              <Cell>{ask.size}</Cell>
+              <Cell>{ask.total}</Cell>
+              <AsksBar style={{ transform: `scaleX(${ask.total / maxTotal})` }} />
+            </Row>
+          ))}
+        </DataSet>
       </Asks>
     </Container>
   );

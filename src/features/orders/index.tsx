@@ -3,13 +3,19 @@ import { useWebsocketInstance } from '../../hooks/useWebsocket';
 import './App.css';
 import { connect, ConnectedProps } from 'react-redux';
 import { AppDispatch, AppState } from '../../';
-import { toggleContract, setSnapshot, updateDelta, derivedStateSelector } from './orders.slice';
+import {
+  toggleContract,
+  setSnapshot,
+  updateDelta,
+  derivedStateSelector,
+  orderbookSelector,
+} from './orders.slice';
 import { getSubscribeMessage, isDeltaResponse, isSnapshotResponse } from './orders.api';
 import StyledOrders from './orders.style';
 
 type Props = ConnectedProps<typeof connector>;
 
-const Orders: React.FC<Props> = ({ onMessage, onOpen, toggleFeed, contract, bids, asks }) => {
+const Orders: React.FC<Props> = ({ onMessage, onOpen, toggleFeed, bids, asks, maxTotal }) => {
   const [hasFocus, setHasFocus] = useState(true);
 
   const { start, stop, emit, status } = useWebsocketInstance({
@@ -44,16 +50,16 @@ const Orders: React.FC<Props> = ({ onMessage, onOpen, toggleFeed, contract, bids
   return (
     <div className="App">
       {status > -1 && !hasFocus && <button onClick={handleResume}>Resume</button>}
-      <button onClick={handleToggleFeed}> {contract} </button>
+      <button onClick={handleToggleFeed}> Switch Currency </button>
       <h2>Status: {status}</h2>
-      <StyledOrders bids={bids} asks={asks} />
+      <StyledOrders bids={bids} asks={asks} maxTotal={maxTotal} />
     </div>
   );
 };
 
 const mapState = (state: AppState) => {
   return {
-    ...derivedStateSelector(state),
+    ...orderbookSelector(state),
     onOpen: (ws: WebSocket) => {
       const subscribe = JSON.stringify(getSubscribeMessage(state.contract));
       ws.send(subscribe);

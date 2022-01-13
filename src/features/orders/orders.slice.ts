@@ -15,7 +15,7 @@ export type OrderModel = { price: number; size: number; total: number; ratio: nu
 
 const orderAdapter = createEntityAdapter<Order>({
   selectId: (order) => order.price,
-  sortComparer: (a, b) => a.price - b.price,
+  sortComparer: (a, b) => b.price - a.price,
 });
 
 const { selectAll } = orderAdapter.getSelectors();
@@ -86,6 +86,59 @@ export const toggleContract = createAsyncThunk<Contract, { sendMessage: (x: stri
     return next;
   }
 );
+
+interface SingleOrder {
+  price: number;
+  size: number;
+  level: number;
+  total: number;
+}
+
+export interface OrderBook {
+  maxTotal: number;
+  bids: SingleOrder[];
+  asks: SingleOrder[];
+}
+
+export const orderbookSelector = (state: OrderState): OrderBook => {
+  const bidList = selectAll(state.bids);
+  const askList = selectAll(state.asks).reverse();
+  const levels = Math.min(bidList.length, askList.length, 16);
+
+  const bids: SingleOrder[] = [];
+  const asks: SingleOrder[] = [];
+
+  let bidsTotal = 0;
+  let asksTotal = 0;
+
+  for (let i = 0; i < levels; i++) {
+    const bid = bidList[i];
+    const ask = askList[i];
+
+    bids.push({
+      price: bid.price,
+      size: bid.size,
+      level: i + 1,
+      total: bidsTotal + bid.size,
+    });
+
+    asks.push({
+      price: ask.price,
+      size: ask.size,
+      level: i + 1,
+      total: asksTotal + ask.size,
+    });
+
+    bidsTotal += bid.size;
+    asksTotal += ask.size;
+  }
+
+  return {
+    maxTotal: Math.max(bidsTotal, asksTotal),
+    bids,
+    asks,
+  };
+};
 
 export const derivedStateSelector = (state: OrderState) => {
   const bidList = selectAll(state.bids).slice(0, 16);
