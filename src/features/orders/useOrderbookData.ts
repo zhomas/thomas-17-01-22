@@ -1,8 +1,7 @@
-import { useDispatch } from 'react-redux';
-import { AppDispatch } from '../..';
-import { useWebsocketInstance } from '../../hooks/useWebsocket';
-import { Contract, getSubscribeMessage } from './orders.api';
-import { setSnapshot, toggleContract, updateDelta } from './orders.slice';
+import { useAppDispatch, useAppSelector } from '../..';
+import { useWebsocket } from '../../hooks/useWebsocket';
+import { Contract } from './orders.slice';
+import { activeContractSelector, setSnapshot, setContract, updateDelta } from './orders.slice';
 
 interface Snapshot {
   numLevels: number;
@@ -21,6 +20,24 @@ interface Delta {
 
 type APIResponse = Delta | Snapshot;
 
+type APIRequest = {
+  event: 'subscribe' | 'unsubscribe';
+  feed: 'book_ui_1';
+  product_ids: Contract[];
+};
+
+const getSubscribeMessage = (to: Contract): APIRequest => ({
+  event: 'subscribe',
+  feed: 'book_ui_1',
+  product_ids: [to],
+});
+
+const getUnsubscrbeMessage = (from: Contract): APIRequest => ({
+  event: 'unsubscribe',
+  feed: 'book_ui_1',
+  product_ids: [from],
+});
+
 function isOrderListResponse(x: unknown): x is APIResponse {
   if (x && typeof x === 'object') {
     return 'bids' in x && 'asks' in x;
@@ -38,43 +55,42 @@ function isDeltaResponse(x: unknown): x is Delta {
 }
 
 export const useOrderbookData = () => {
-  const dispatch = useDispatch<AppDispatch>();
+  const dispatch = useAppDispatch();
+  const contract = useAppSelector(activeContractSelector);
 
-  const onOpen = (ws: WebSocket) => {
-    const subscribe = JSON.stringify(getSubscribeMessage('PI_XBTUSD'));
-    ws.send(subscribe);
-  };
-
-  const onMessage = (data: unknown) => {
-    if (isSnapshotResponse(data)) {
-      const { bids, asks } = data;
-      dispatch(setSnapshot({ bids, asks }));
-      return;
-    }
-
-    if (isDeltaResponse(data)) {
-      const { bids, asks } = data;
-      dispatch(updateDelta({ bids, asks }));
-      return;
-    }
-
-    // ignore
-  };
-
-  const { start, stop, emit, status } = useWebsocketInstance({
+  const { start, stop, sendMessage } = useWebsocket<APIRequest, APIResponse>({
     url: 'wss://www.cryptofacilities.com/ws/v1',
-    interval: 50,
-    onMessage,
-    onOpen,
-  });
+    onOpen: () => {
+      const msg = getSubscribeMessage('PI_XBTUSD');
+      sendMessage(msg);
+    },
+    onMessage: (data) => {
+      if (isSnapshotResponse(data)) {
+        const { bids, asks } = data;
+        dispatch(setSnapshot({ bids, asks }));
+        return;
+      }
 
-  const switchCurrency = () => {
-    dispatch(toggleContract({ sendMessage: emit }));
-  };
+      if (isDeltaResponse(data)) {
+        const { bids, asks } = data;
+        dispatch(updateDelta({ bids, asks }));
+        return;
+      }
+    },
+  });
 
   return {
     start,
     stop,
-    switchCurrency,
+    switchCurrency: () => {
+      const next = contract === 'PI_XBTUSD' ? 'PI_ETHUSD' : 'PI_XBTUSD';
+      const subscribe = getSubscribeMessage(next);
+      const unsubscribe = getUnsubscrbeMessage(contract);
+
+      sendMessage(subscribe);
+      sendMessage(unsubscribe);
+
+      dispatch(setContract(next));
+    },
   };
 };

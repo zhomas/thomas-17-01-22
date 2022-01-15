@@ -6,11 +6,10 @@ import {
   EntityState,
   PayloadAction,
 } from '@reduxjs/toolkit';
-import _ from 'lodash';
-import { Contract, getSubscribeMessage, getUnsubscrbeMessage } from './orders.api';
 import { tick } from '../site/site.slice';
 import { AppState } from '../..';
 
+export type Contract = 'PI_XBTUSD' | 'PI_ETHUSD';
 export type OrderTuple = [price: number, size: number];
 
 type Order = { price: number; size: number };
@@ -59,6 +58,12 @@ const ordersSlice = createSlice({
   name: 'orders',
   initialState,
   reducers: {
+    setContract: (state, action: PayloadAction<Contract>) => {
+      if (action.payload === state.contract) return;
+      state.contract = action.payload;
+      state.bids = orderAdapter.getInitialState();
+      state.asks = orderAdapter.getInitialState();
+    },
     setSnapshot: (state, action: PayloadAction<{ bids: OrderTuple[]; asks: OrderTuple[] }>) => {
       orderAdapter.setAll(state.bids, getOrderObjects(action.payload.bids));
       orderAdapter.setAll(state.asks, getOrderObjects(action.payload.asks));
@@ -71,11 +76,6 @@ const ordersSlice = createSlice({
     },
   },
   extraReducers: (builder) => {
-    builder.addCase(toggleContract.fulfilled, (state, action) => {
-      state.contract = action.payload;
-      state.bids = orderAdapter.getInitialState();
-      state.asks = orderAdapter.getInitialState();
-    });
     builder.addCase(tick, (state) => {
       orderAdapter.upsertMany(state.bids, getOrderObjects(state.stashedBids));
       orderAdapter.upsertMany(state.asks, getOrderObjects(state.stashedAsks));
@@ -86,22 +86,6 @@ const ordersSlice = createSlice({
     });
   },
 });
-
-export const toggleContract = createAsyncThunk<Contract, { sendMessage: (x: string) => void }>(
-  'orders/toggleContract',
-  ({ sendMessage }, { getState }) => {
-    const { contract } = getState() as OrderState;
-
-    const next = contract === 'PI_XBTUSD' ? 'PI_ETHUSD' : 'PI_XBTUSD';
-    const subscribe = JSON.stringify(getSubscribeMessage(next));
-    const unsubscribe = JSON.stringify(getUnsubscrbeMessage(contract));
-
-    sendMessage(subscribe);
-    sendMessage(unsubscribe);
-
-    return next;
-  }
-);
 
 interface SingleOrder {
   price: number;
@@ -123,6 +107,7 @@ export interface OrderBook {
 
 const bidsSelector = (state: AppState) => state.orderbook.bids;
 const asksSelector = (state: AppState) => state.orderbook.asks;
+export const activeContractSelector = (state: AppState) => state.orderbook.contract;
 
 export const obSelector = createSelector(
   bidsSelector,
@@ -135,7 +120,7 @@ export const obSelector = createSelector(
 
     if (!levels) {
       return {
-        getRatio: (o) => 0,
+        getRatio: () => 0,
         bids: [],
         asks: [],
         spread: '',
@@ -181,8 +166,6 @@ export const obSelector = createSelector(
 
     const spread = Math.abs(bids[0].price - asks[0].price);
 
-    console.log({ spread, spreadPercent: (spread / bids[0].price) * 100 });
-
     return {
       getRatio: (o) => o.total / maxTotal,
       bids,
@@ -193,6 +176,6 @@ export const obSelector = createSelector(
   }
 );
 
-export const { setSnapshot, updateDelta } = ordersSlice.actions;
+export const { setContract, setSnapshot, updateDelta } = ordersSlice.actions;
 
 export default ordersSlice.reducer;

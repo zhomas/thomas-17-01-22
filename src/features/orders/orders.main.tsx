@@ -25,7 +25,7 @@ const HeadingRow = styled(Row)`
   }
 `;
 
-const RatioBar = styled.div`
+const DepthGraph = styled.div`
   position: absolute;
   display: block;
   content: '';
@@ -37,14 +37,14 @@ const RatioBar = styled.div`
   transform-origin: left;
 `;
 
-const BidsBar = styled(RatioBar)`
+const DepthGraphBids = styled(DepthGraph)`
   background: #123534;
   @media only screen and (min-width: 768px) {
     transform-origin: right;
   }
 `;
 
-const AsksBar = styled(RatioBar)`
+const DepthGraphAsks = styled(DepthGraph)`
   background: #3d1e28;
 `;
 
@@ -63,11 +63,11 @@ const Container = styled.div`
   min-height: 200px;
   grid-template-columns: 1fr;
   margin-bottom: 12px;
-  grid-template-rows: fit-content(20px) minmax(400px, 1fr) fit-content(20px) minmax(400px, 1fr);
+  grid-template-rows: fit-content(20px) minmax(380px, 1fr) fit-content(20px) minmax(380px, 1fr);
 
   @media only screen and (min-width: 768px) {
     grid-template-columns: 1fr 1fr;
-    grid-template-rows: fit-content(20px) minmax(400px, 1fr);
+    grid-template-rows: fit-content(20px) minmax(380px, 1fr);
   }
 `;
 
@@ -170,7 +170,7 @@ const Orders: FC<Props> = ({ orderbook }) => {
               <CellPrice>{bid.displayPrice}</CellPrice>
               <Cell>{bid.displaySize}</Cell>
               <Cell>{bid.displayTotal}</Cell>
-              <BidsBar style={{ transform: `scaleX(${getRatio(bid)})` }} />
+              <DepthGraphBids style={{ transform: `scaleX(${getRatio(bid)})` }} />
             </Row>
           ))}
         </DataSet>
@@ -187,7 +187,7 @@ const Orders: FC<Props> = ({ orderbook }) => {
               <CellPrice>{ask.displayPrice}</CellPrice>
               <Cell>{ask.displaySize}</Cell>
               <Cell>{ask.displayTotal}</Cell>
-              <AsksBar style={{ transform: `scaleX(${getRatio(ask)})` }} />
+              <DepthGraphAsks style={{ transform: `scaleX(${getRatio(ask)})` }} />
             </Row>
           ))}
         </DataSet>

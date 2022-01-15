@@ -1,52 +1,38 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useRef } from 'react';
 
-interface OrderListSubscribeOptions {
+interface WebsocketOptions<TResponse> {
   url: string;
-  interval: number;
-  onOpen: (ws: WebSocket) => void;
-  onMessage: (message: unknown) => void;
+  onOpen: () => void;
+  onMessage: (message: TResponse) => void;
 }
 
-export const useWebsocketInstance = (opts: OrderListSubscribeOptions) => {
+export function useWebsocket<TMessage, Tresponse>(opts: WebsocketOptions<Tresponse>) {
   const websocket = useRef<WebSocket | null>(null);
-  const queue = useRef<string[]>([]);
-
-  // useEffect(() => {
-  //   const interval = setInterval(() => {
-  //     const next = queue.current.pop();
-  //     opts.onMessage(next);
-  //   }, opts.interval);
-
-  //   return () => {
-  //     clearInterval(interval);
-  //   };
-  // });
-
   return {
-    status: websocket.current ? websocket.current.readyState : -1,
     start: () => {
       const ws = new WebSocket(opts.url);
+      websocket.current = ws;
+
       ws.onopen = () => {
-        console.log('opening connection');
-        opts.onOpen(ws);
+        console.log('opening connection...');
+        opts.onOpen();
       };
 
       ws.onclose = () => {
-        console.log('closing connection');
+        console.log('closing connection...');
       };
 
       ws.onmessage = (e) => {
-        //queue.current.push(JSON.parse(e.data));
-        opts.onMessage(JSON.parse(e.data));
+        const result = JSON.parse(e.data);
+        opts.onMessage(result);
       };
-
-      websocket.current = ws;
     },
     stop: () => {
       websocket.current?.close();
     },
-    emit: (message: string) => {
-      websocket.current?.send(message);
+    sendMessage: (message: TMessage) => {
+      const json = JSON.stringify(message);
+      websocket.current?.send(json);
     },
   };
-};
+}
