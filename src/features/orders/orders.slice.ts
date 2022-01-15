@@ -1,5 +1,4 @@
 import {
-  createAsyncThunk,
   createEntityAdapter,
   createSelector,
   createSlice,
@@ -8,18 +7,40 @@ import {
 } from '@reduxjs/toolkit';
 import { tick } from '../site/site.slice';
 import { AppState } from '../..';
-
-export type Contract = 'PI_XBTUSD' | 'PI_ETHUSD';
-export type OrderTuple = [price: number, size: number];
-
-type Order = { price: number; size: number };
+import { Contract, Order, OrderBook, OrderProps, OrderState } from './orderbook.types';
 
 const orderAdapter = createEntityAdapter<Order>({
   selectId: (order) => order.price,
   sortComparer: (a, b) => b.price - a.price,
 });
 
+const initialState: OrderState = {
+  bids: orderAdapter.getInitialState(),
+  asks: orderAdapter.getInitialState(),
+  stashedBids: [],
+  stashedAsks: [],
+  contract: 'PI_XBTUSD',
+};
+
+const getOrderProps = (level: number, total: number, size: number, price: number) => ({
+  level,
+  total,
+  displayTotal: total.toLocaleString(),
+  displaySize: size.toLocaleString(),
+  displayPrice: price.toFixed(2).toLocaleString(),
+});
+
+const initialOrderbook = {
+  getRatio: () => 0,
+  bids: [],
+  asks: [],
+  spread: '0.0',
+  spreadPercent: '0.00',
+};
+
 const { selectAll } = orderAdapter.getSelectors();
+const bidsSelector = (state: AppState) => state.orderbook.bids;
+const asksSelector = (state: AppState) => state.orderbook.asks;
 
 const pruneEmptyOrders = (list: EntityState<Order>) => {
   const ids = list.ids.filter((id) => {
@@ -30,55 +51,36 @@ const pruneEmptyOrders = (list: EntityState<Order>) => {
   orderAdapter.removeMany(list, ids);
 };
 
-const getOrderObjects = (list: OrderTuple[]): Order[] => {
-  return list.map((o) => ({ price: o[0], size: o[1] }));
-};
-
-interface OrderState {
-  bids: EntityState<Order>;
-  asks: EntityState<Order>;
-  contract: Contract;
-  lastUpdateTime: number;
-  tickInterval: number;
-  stashedBids: OrderTuple[];
-  stashedAsks: OrderTuple[];
-}
-
-const initialState: OrderState = {
-  bids: orderAdapter.getInitialState(),
-  asks: orderAdapter.getInitialState(),
-  stashedBids: [],
-  stashedAsks: [],
-  contract: 'PI_XBTUSD',
-  lastUpdateTime: -1,
-  tickInterval: 1000,
-};
+type OrderbookUpdate = { bids: Order[]; asks: Order[] }
 
 const ordersSlice = createSlice({
   name: 'orders',
   initialState,
   reducers: {
     setContract: (state, action: PayloadAction<Contract>) => {
-      if (action.payload === state.contract) return;
       state.contract = action.payload;
       state.bids = orderAdapter.getInitialState();
       state.asks = orderAdapter.getInitialState();
+      state.stashedBids = [];
+      state.stashedAsks = [];
     },
-    setSnapshot: (state, action: PayloadAction<{ bids: OrderTuple[]; asks: OrderTuple[] }>) => {
-      orderAdapter.setAll(state.bids, getOrderObjects(action.payload.bids));
-      orderAdapter.setAll(state.asks, getOrderObjects(action.payload.asks));
+    setSnapshot: (state, action: PayloadAction<OrderbookUpdate>) => {
+      orderAdapter.setAll(state.bids, action.payload.bids);
+      orderAdapter.setAll(state.asks, action.payload.asks);
+      state.stashedBids = [];
+      state.stashedAsks = [];
       pruneEmptyOrders(state.bids);
       pruneEmptyOrders(state.asks);
     },
-    updateDelta: (state, action: PayloadAction<{ bids: OrderTuple[]; asks: OrderTuple[] }>) => {
+    updateDelta: (state, action: PayloadAction<OrderbookUpdate>) => {
       state.stashedBids.push(...action.payload.bids);
       state.stashedAsks.push(...action.payload.asks);
     },
   },
   extraReducers: (builder) => {
     builder.addCase(tick, (state) => {
-      orderAdapter.upsertMany(state.bids, getOrderObjects(state.stashedBids));
-      orderAdapter.upsertMany(state.asks, getOrderObjects(state.stashedAsks));
+      orderAdapter.upsertMany(state.bids, state.stashedBids);
+      orderAdapter.upsertMany(state.asks, state.stashedAsks);
       state.stashedBids = [];
       state.stashedAsks = [];
       pruneEmptyOrders(state.bids);
@@ -87,49 +89,19 @@ const ordersSlice = createSlice({
   },
 });
 
-interface SingleOrder {
-  price: number;
-  size: number;
-  level: number;
-  total: number;
-  displayPrice: string;
-  displayTotal: string;
-  displaySize: string;
-}
-
-export interface OrderBook {
-  getRatio: (o: SingleOrder) => number;
-  bids: SingleOrder[];
-  asks: SingleOrder[];
-  spread: string;
-  spreadPercent: string;
-}
-
-const bidsSelector = (state: AppState) => state.orderbook.bids;
-const asksSelector = (state: AppState) => state.orderbook.asks;
-export const activeContractSelector = (state: AppState) => state.orderbook.contract;
-
-export const obSelector = createSelector(
+export const orderbookSelector = createSelector(
   bidsSelector,
   asksSelector,
-  (bidObj, askObj): OrderBook => {
-    const bidList = selectAll(bidObj);
-    const askList = selectAll(askObj).reverse();
-
+  (bidDict, askDict): OrderBook => {
+    const bidList = selectAll(bidDict);
+    const askList = selectAll(askDict).reverse();
     const levels = Math.min(bidList.length, askList.length, 16);
 
-    if (!levels) {
-      return {
-        getRatio: () => 0,
-        bids: [],
-        asks: [],
-        spread: '',
-        spreadPercent: '',
-      };
-    }
+    if (!levels) return initialOrderbook;
 
-    const bids: SingleOrder[] = [];
-    const asks: SingleOrder[] = [];
+    const bids: OrderProps[] = [];
+    const asks: OrderProps[] = [];
+    const spread = Math.abs(bidList[0].price - askList[0].price);
 
     let bidsTotal = 0;
     let asksTotal = 0;
@@ -138,43 +110,24 @@ export const obSelector = createSelector(
       const bid = bidList[i];
       const ask = askList[i];
 
-      bids.push({
-        price: bid.price,
-        size: bid.size,
-        level: i + 1,
-        total: bidsTotal + bid.size,
-        displayTotal: (bidsTotal + bid.size).toLocaleString(),
-        displaySize: bid.size.toLocaleString(),
-        displayPrice: bid.price.toFixed(2).toLocaleString(),
-      });
-
-      asks.push({
-        price: ask.price,
-        size: ask.size,
-        level: i + 1,
-        total: asksTotal + ask.size,
-        displayTotal: (asksTotal + ask.size).toLocaleString(),
-        displaySize: ask.size.toLocaleString(),
-        displayPrice: ask.price.toFixed(2).toLocaleString(),
-      });
+      bids.push(getOrderProps(i + 1, bidsTotal + bid.size, bid.size, bid.price));
+      asks.push(getOrderProps(i + 1, asksTotal + ask.size, ask.size, ask.price));
 
       bidsTotal += bid.size;
       asksTotal += ask.size;
     }
 
-    const maxTotal = Math.max(asksTotal, bidsTotal);
-
-    const spread = Math.abs(bids[0].price - asks[0].price);
-
     return {
-      getRatio: (o) => o.total / maxTotal,
       bids,
       asks,
       spread: spread.toFixed(1).toLocaleString(),
-      spreadPercent: ((spread / bids[0].price) * 100).toFixed(2),
+      spreadPercent: ((spread / bidList[0].price) * 100).toFixed(2),
+      getRatio: (o) => o.total / Math.max(asksTotal, bidsTotal),
     };
   }
 );
+
+export const activeContractSelector = (state: AppState) => state.orderbook.contract;
 
 export const { setContract, setSnapshot, updateDelta } = ordersSlice.actions;
 

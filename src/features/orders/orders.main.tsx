@@ -1,6 +1,6 @@
 import React, { FC } from 'react';
 import styled from 'styled-components';
-import { obSelector } from './orders.slice';
+import { orderbookSelector } from './orders.slice';
 import { connect, ConnectedProps } from 'react-redux';
 
 import { AppState } from '../..';
@@ -198,7 +198,7 @@ const Orders: FC<Props> = ({ orderbook }) => {
 
 const mapState = (state: AppState) => {
   return {
-    orderbook: obSelector(state),
+    orderbook: orderbookSelector(state),
   };
 };
 
