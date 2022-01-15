@@ -8,6 +8,8 @@ import {
 } from '@reduxjs/toolkit';
 import _ from 'lodash';
 import { Contract, getSubscribeMessage, getUnsubscrbeMessage } from './orders.api';
+import { tick } from '../site/site.slice';
+import { AppState } from '../..';
 
 export type OrderTuple = [price: number, size: number];
 
@@ -58,14 +60,6 @@ const ordersSlice = createSlice({
   name: 'orders',
   initialState,
   reducers: {
-    tick: (state) => {
-      orderAdapter.upsertMany(state.bids, getOrderObjects(state.stashedBids));
-      orderAdapter.upsertMany(state.asks, getOrderObjects(state.stashedAsks));
-      state.stashedBids = [];
-      state.stashedAsks = [];
-      pruneEmptyOrders(state.bids);
-      pruneEmptyOrders(state.asks);
-    },
     setSnapshot: (state, action: PayloadAction<{ bids: OrderTuple[]; asks: OrderTuple[] }>) => {
       orderAdapter.setAll(state.bids, getOrderObjects(action.payload.bids));
       orderAdapter.setAll(state.asks, getOrderObjects(action.payload.asks));
@@ -82,6 +76,14 @@ const ordersSlice = createSlice({
       state.contract = action.payload;
       state.bids = orderAdapter.getInitialState();
       state.asks = orderAdapter.getInitialState();
+    });
+    builder.addCase(tick, (state) => {
+      orderAdapter.upsertMany(state.bids, getOrderObjects(state.stashedBids));
+      orderAdapter.upsertMany(state.asks, getOrderObjects(state.stashedAsks));
+      state.stashedBids = [];
+      state.stashedAsks = [];
+      pruneEmptyOrders(state.bids);
+      pruneEmptyOrders(state.asks);
     });
   },
 });
@@ -120,8 +122,8 @@ export interface OrderBook {
   spreadPercent: string;
 }
 
-const bidsSelector = (state: OrderState) => state.bids;
-const asksSelector = (state: OrderState) => state.asks;
+const bidsSelector = (state: AppState) => state.orderbook.bids;
+const asksSelector = (state: AppState) => state.orderbook.asks;
 
 export const obSelector = createSelector(
   bidsSelector,
@@ -192,70 +194,6 @@ export const obSelector = createSelector(
   }
 );
 
-export const orderbookSelector = (state: OrderState): OrderBook => {
-  const bidList = selectAll(state.bids);
-  const askList = selectAll(state.asks).reverse();
-  const levels = Math.min(bidList.length, askList.length, 16);
-
-  if (!levels) {
-    return {
-      getRatio: (o) => 0,
-      bids: [],
-      asks: [],
-      spread: '',
-      spreadPercent: '',
-    };
-  }
-
-  const bids: SingleOrder[] = [];
-  const asks: SingleOrder[] = [];
-
-  let bidsTotal = 0;
-  let asksTotal = 0;
-
-  for (let i = 0; i < levels; i++) {
-    const bid = bidList[i];
-    const ask = askList[i];
-
-    bids.push({
-      price: bid.price,
-      size: bid.size,
-      level: i + 1,
-      total: bidsTotal + bid.size,
-      displayTotal: (bidsTotal + bid.size).toLocaleString(),
-      displaySize: bid.size.toLocaleString(),
-      displayPrice: bid.price.toFixed(2).toLocaleString(),
-    });
-
-    asks.push({
-      price: ask.price,
-      size: ask.size,
-      level: i + 1,
-      total: asksTotal + ask.size,
-      displayTotal: (asksTotal + bid.size).toLocaleString(),
-      displaySize: ask.size.toLocaleString(),
-      displayPrice: bid.price.toFixed(2).toLocaleString(),
-    });
-
-    bidsTotal += bid.size;
-    asksTotal += ask.size;
-  }
-
-  const maxTotal = Math.max(asksTotal, bidsTotal);
-
-  const spread = Math.abs(bids[0].price - asks[0].price);
-
-  console.log({ spread, spreadPercent: (spread / bids[0].price) * 100 });
-
-  return {
-    getRatio: (o) => o.total / maxTotal,
-    bids,
-    asks,
-    spread: spread.toFixed(1).toLocaleString(),
-    spreadPercent: ((spread / bids[0].price) * 100).toFixed(2),
-  };
-};
-
-export const { setSnapshot, updateDelta, tick } = ordersSlice.actions;
+export const { setSnapshot, updateDelta } = ordersSlice.actions;
 
 export default ordersSlice.reducer;

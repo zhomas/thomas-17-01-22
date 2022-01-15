@@ -1,97 +1,34 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { useWebsocketInstance } from '../../hooks/useWebsocket';
 import './App.css';
 import { connect, ConnectedProps } from 'react-redux';
-import { AppDispatch, AppState } from '../..';
-import {
-  toggleContract,
-  setSnapshot,
-  updateDelta,
-  orderbookSelector,
-  obSelector,
-  tick,
-} from './orders.slice';
-import { getSubscribeMessage, isDeltaResponse, isSnapshotResponse } from './orders.api';
+import { AppDispatch, AppState, useAppSelector } from '../..';
 import StyledOrders from './orders.main';
+import { useOrderbookData } from './useOrderbookData';
+import { hasFocusSelector } from '../site/site.slice';
 
-type Props = ConnectedProps<typeof connector>;
+type ReduxProps = ConnectedProps<typeof connector>;
 
-const OrdersContainer: React.FC<Props> = ({ onMessage, toggleFeed, refresh }) => {
-  const [hasFocus, setHasFocus] = useState(true);
+type Props = ReduxProps;
 
-  const { start, stop, emit, status } = useWebsocketInstance({
-    url: 'wss://www.cryptofacilities.com/ws/v1',
-    interval: 50,
-    onMessage,
-    onOpen: (ws: WebSocket) => {
-      const subscribe = JSON.stringify(getSubscribeMessage('PI_XBTUSD'));
-      ws.send(subscribe);
-    },
-  });
-
-  const handleToggleFeed = () => toggleFeed(emit);
-
-  const handleResume = () => {
-    setHasFocus(true);
-    start();
-  };
-
-  const onBlur = () => {
-    setHasFocus(false);
-    stop();
-  };
+const OrdersContainer: React.FC<Props> = () => {
+  const { start, stop, switchCurrency } = useOrderbookData();
+  const hasFocus = useAppSelector(hasFocusSelector);
 
   useEffect(() => {
-    start();
-    window.addEventListener('blur', onBlur);
-    return () => {
-      window.removeEventListener('blur', onBlur);
-    };
-  }, []);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      refresh();
-    }, 300);
-
-    return () => {
-      clearInterval(interval);
-    };
-  });
+    const fn = hasFocus ? start : stop;
+    fn();
+  }, [hasFocus]);
 
   return (
     <div className="App">
       <StyledOrders />
-      {status > -1 && !hasFocus && <button onClick={handleResume}>Resume</button>}
-      <button onClick={handleToggleFeed}> Switch Currency </button>
-      <h2>Status: {status}</h2>
+      <button onClick={switchCurrency}> Switch Currency </button>
     </div>
   );
 };
 
 const mapDispatch = (dispatch: AppDispatch) => ({
-  refresh: () => {
-    dispatch(tick());
-  },
-
-  onMessage: (data: unknown) => {
-    if (isSnapshotResponse(data)) {
-      const { bids, asks } = data;
-      dispatch(setSnapshot({ bids, asks }));
-      return;
-    }
-
-    if (isDeltaResponse(data)) {
-      const { bids, asks } = data;
-      dispatch(updateDelta({ bids, asks }));
-      return;
-    }
-
-    // ignore
-  },
-  toggleFeed: (sendMessage: (s: string) => void) => {
-    dispatch(toggleContract({ sendMessage }));
-  },
+  refresh: () => {},
 });
 
 const connector = connect(undefined, mapDispatch);
