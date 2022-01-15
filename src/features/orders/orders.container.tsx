@@ -1,7 +1,6 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import './App.css';
+import React, { useEffect } from 'react';
 import { connect, ConnectedProps } from 'react-redux';
-import { AppDispatch, AppState, useAppSelector } from '../..';
+import { AppDispatch, useAppSelector } from '../..';
 import StyledOrders from './orders.main';
 import { useOrderbookData } from './useOrderbookData';
 import { hasFocusSelector } from '../site/site.slice';
@@ -20,10 +19,10 @@ const OrdersContainer: React.FC<Props> = () => {
   }, [hasFocus]);
 
   return (
-    <div className="App">
+    <>
       <StyledOrders />
       <button onClick={switchCurrency}> Switch Currency </button>
-    </div>
+    </>
   );
 };
 

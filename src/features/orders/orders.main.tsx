@@ -1,6 +1,6 @@
 import React, { FC } from 'react';
 import styled from 'styled-components';
-import { obSelector, OrderBook, OrderModel } from './orders.slice';
+import { obSelector } from './orders.slice';
 import { connect, ConnectedProps } from 'react-redux';
 
 import { AppState } from '../..';
@@ -18,6 +18,7 @@ const Row = styled.div`
 const HeadingRow = styled(Row)`
   text-transform: uppercase;
   color: #474d5a;
+  font-weight: 600;
 
   @media only screen and (min-width: 768px) {
     border-bottom: 1px solid #232b38;
@@ -61,11 +62,12 @@ const Container = styled.div`
   grid-gap: 0em 0em;
   min-height: 200px;
   grid-template-columns: 1fr;
-  grid-template-rows: fit-content 20px fit-content;
+  margin-bottom: 12px;
+  grid-template-rows: fit-content(20px) minmax(400px, 1fr) fit-content(20px) minmax(400px, 1fr);
 
   @media only screen and (min-width: 768px) {
     grid-template-columns: 1fr 1fr;
-    grid-template-rows: fit-content 1fr;
+    grid-template-rows: fit-content(20px) minmax(400px, 1fr);
   }
 `;
 
@@ -78,8 +80,9 @@ const DataSet = styled.div`
 
 const Spread = styled.div`
   padding: 5px;
-  grid-area: 2 / 1 / 3 / 2;
+  grid-area: 3 / 1 / 4 / 2;
   color: #474d5a;
+  text-align: center;
 
   @media only screen and (min-width: 768px) {
     grid-area: 1 / 1 / 2 / 3;
@@ -88,7 +91,7 @@ const Spread = styled.div`
 `;
 
 const Bids = styled.div`
-  grid-area: 3 / 1 / 4 / 2;
+  grid-area: 4 / 1 / 5 / 2;
 
   ${HeadingRow} {
     display: none;
@@ -112,7 +115,7 @@ const Bids = styled.div`
 `;
 
 const Asks = styled.div`
-  grid-area: 1 / 1 / 2 / 2;
+  grid-area: 2 / 1 / 3 / 2;
 
   ${DataSet} {
     flex-direction: column-reverse;
@@ -131,6 +134,17 @@ const Asks = styled.div`
   }
 `;
 
+const Heading = styled.div`
+  padding: 5px 10px;
+  grid-area: 1 / 1 / 2 / 2;
+  border-bottom: 1px solid #232b38;
+  font-size: 14px;
+
+  @media only screen and (min-width: 768px) {
+    grid-area: 1 / 1 / 2 / 3;
+  }
+`;
+
 type Props = ConnectedProps<typeof connector>;
 
 const Orders: FC<Props> = ({ orderbook }) => {
@@ -140,6 +154,7 @@ const Orders: FC<Props> = ({ orderbook }) => {
 
   return (
     <Container>
+      <Heading>Order Book</Heading>
       <Spread>
         Spread: {spread} ({spreadPercent}%)
       </Spread>

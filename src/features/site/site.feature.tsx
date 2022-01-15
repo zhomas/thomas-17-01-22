@@ -8,7 +8,13 @@ const Site: FC = ({ children }) => {
 
   const handleClick = () => dispatch(setHasFocus(true));
 
-  console.log(hasFocus);
+  useEffect(() => {
+    const heartbeat = setInterval(() => {
+      if (!hasFocus) return;
+      dispatch(tick());
+    }, 300);
+    return () => clearInterval(heartbeat);
+  });
 
   useEffect(() => {
     const onBlur = () => dispatch(setHasFocus(false));
@@ -17,15 +23,6 @@ const Site: FC = ({ children }) => {
       window.removeEventListener('blur', onBlur);
     };
   }, []);
-
-  useEffect(() => {
-    const heartbeat = setInterval(() => {
-      if (hasFocus) {
-        dispatch(tick());
-      }
-    }, 300);
-    return () => clearInterval(heartbeat);
-  });
 
   return (
     <>

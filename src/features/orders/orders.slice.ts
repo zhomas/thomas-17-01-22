@@ -14,7 +14,6 @@ import { AppState } from '../..';
 export type OrderTuple = [price: number, size: number];
 
 type Order = { price: number; size: number };
-export type OrderModel = { price: number; size: number; total: number; ratio: number };
 
 const orderAdapter = createEntityAdapter<Order>({
   selectId: (order) => order.price,
