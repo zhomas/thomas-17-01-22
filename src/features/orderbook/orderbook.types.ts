@@ -39,6 +39,7 @@ export interface OrderbookProps {
   asks: OrderProps[];
   spread: string;
   spreadPercent: string;
+  status: 'loading' | 'active';
   getRatio: (o: OrderProps) => number;
 }
 

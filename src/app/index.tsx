@@ -27,7 +27,7 @@ export const App: FC = ({ children }) => {
 
   return (
     <>
-      <Orderbook />
+      <Orderbook heading={'Order Book'} />
       {!hasFocus && <button onClick={handleClick}>Resume</button>}
     </>
   );

@@ -24,12 +24,13 @@ const initialState: OrdersState = {
   contract: 'PI_XBTUSD',
 };
 
-const initialOrderbook = {
+const initialOrderbook: OrderbookProps = {
   getRatio: () => 0,
   bids: [],
   asks: [],
   spread: '0.0',
   spreadPercent: '0.00',
+  status: 'loading',
 };
 
 const { selectAll } = orderAdapter.getSelectors();
@@ -51,7 +52,7 @@ const pruneEmptyOrders = (list: EntityState<Order>) => {
 };
 
 /**
- * Actions for updating redux state.
+ * Various actions to update the application state.
  *
  */
 const ordersSlice = createSlice({
@@ -140,6 +141,7 @@ export const orderbookSelector = createSelector(
       spread: spread.toFixed(1).toLocaleString(),
       spreadPercent: ((spread / bidList[0].price) * 100).toFixed(2),
       getRatio: (o) => o.levelTotal / Math.max(asksTotal, bidsTotal),
+      status: levels > 0 ? 'active' : 'loading',
     };
   }
 );
