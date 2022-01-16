@@ -9,6 +9,8 @@ import { tick } from '../../app/app.slice';
 import { AppState } from '../..';
 import { Contract, Order, OrderBook, OrderProps, OrderState } from './orderbook.types';
 
+type OrderbookUpdate = { bids: Order[]; asks: Order[] };
+
 const orderAdapter = createEntityAdapter<Order>({
   selectId: (order) => order.price,
   sortComparer: (a, b) => b.price - a.price,
@@ -22,14 +24,6 @@ const initialState: OrderState = {
   contract: 'PI_XBTUSD',
 };
 
-const getOrderProps = (level: number, total: number, size: number, price: number) => ({
-  level,
-  total,
-  displayTotal: total.toLocaleString(),
-  displaySize: size.toLocaleString(),
-  displayPrice: price.toFixed(2).toLocaleString(),
-});
-
 const initialOrderbook = {
   getRatio: () => 0,
   bids: [],
@@ -42,6 +36,11 @@ const { selectAll } = orderAdapter.getSelectors();
 const bidsSelector = (state: AppState) => state.orderbook.bids;
 const asksSelector = (state: AppState) => state.orderbook.asks;
 
+/**
+ * Removes empty orders from the collection.
+ *
+ * @param list
+ */
 const pruneEmptyOrders = (list: EntityState<Order>) => {
   const ids = list.ids.filter((id) => {
     const o = list.entities[id];
@@ -51,8 +50,10 @@ const pruneEmptyOrders = (list: EntityState<Order>) => {
   orderAdapter.removeMany(list, ids);
 };
 
-type OrderbookUpdate = { bids: Order[]; asks: Order[] };
-
+/**
+ * Actions for updating redux state.
+ *
+ */
 const ordersSlice = createSlice({
   name: 'orders',
   initialState,
@@ -89,6 +90,22 @@ const ordersSlice = createSlice({
   },
 });
 
+/**
+ * Returns a properly formatted order, ready for display.
+ *
+ */
+const getOrderProps = (level: number, total: number, size: number, price: number) => ({
+  level,
+  total,
+  displayTotal: total.toLocaleString(),
+  displaySize: size.toLocaleString(),
+  displayPrice: price.toFixed(2).toLocaleString(),
+});
+
+/**
+ * Returns the state of the orderbook.
+ *
+ */
 export const orderbookSelector = createSelector(
   bidsSelector,
   asksSelector,
@@ -127,6 +144,12 @@ export const orderbookSelector = createSelector(
   }
 );
 
+/**
+ * Returns the currently selected contract.
+ *
+ * @param state
+ * @returns
+ */
 export const activeContractSelector = (state: AppState) => state.orderbook.contract;
 
 export const { setContract, setSnapshot, updateDelta } = ordersSlice.actions;

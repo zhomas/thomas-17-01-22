@@ -3,7 +3,7 @@ import { useAppSelector } from '../..';
 import { useOrderbookData } from './useOrderbookData';
 import { hasFocusSelector } from '../../app/app.slice';
 import { orderbookSelector } from './orderbook.slice';
-import StyledOrderbook from './orderbook.component';
+import StyledOrderbook from './orderbook.view';
 
 interface Props {}
 

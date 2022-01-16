@@ -7,7 +7,6 @@ import './index.css';
 export const App: FC = ({ children }) => {
   const dispatch = useAppDispatch();
   const hasFocus = useAppSelector(hasFocusSelector);
-
   const handleClick = () => dispatch(setHasFocus(true));
 
   useEffect(() => {

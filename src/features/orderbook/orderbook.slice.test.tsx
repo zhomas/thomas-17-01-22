@@ -2,7 +2,7 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { orderbookSelector } from './orderbook.slice';
 
-it('calculates the order book', () => {
+it('correctly calculates the orderbook', () => {
   const orderBook = orderbookSelector({
     orderbook: {
       bids: {
