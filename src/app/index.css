@@ -1,0 +1,27 @@
+body {
+  margin: 12px;
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-weight: 600;
+  font-size: 12px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: #1a1c22;
+  color: #fff;
+}
+
+* {
+  box-sizing: border-box;
+  font-family: inherit;
+  color: inherit;
+}
+
+button {
+  background: #5841d8;
+  border-radius: 4px;
+  padding: 6px 18px;
+  border: 0;
+  display: block;
+  margin: 10px auto;
+  cursor: pointer;
+  font-weight: 500;
+}

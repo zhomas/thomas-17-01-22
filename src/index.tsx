@@ -1,17 +1,29 @@
-import React from 'react';
 import ReactDOM from 'react-dom';
-import './index.css';
-import App from './App';
-import reportWebVitals from './reportWebVitals';
 
-ReactDOM.render(
-  <React.StrictMode>
+import appReducer from './app/app.slice';
+import orderbookReducer from './features/orderbook/orderbook.slice';
+import { combineReducers, configureStore } from '@reduxjs/toolkit';
+import { Provider, TypedUseSelectorHook, useDispatch, useSelector } from 'react-redux';
+import { App } from './app';
+
+const rootReducer = combineReducers({
+  site: appReducer,
+  orderbook: orderbookReducer,
+});
+
+const store = configureStore({
+  reducer: rootReducer,
+});
+
+export type AppState = ReturnType<typeof rootReducer>;
+export type AppDispatch = typeof store.dispatch;
+export const useAppDispatch = () => useDispatch<AppDispatch>();
+export const useAppSelector: TypedUseSelectorHook<AppState> = useSelector;
+
+const site = (
+  <Provider store={store}>
     <App />
-  </React.StrictMode>,
-  document.getElementById('root')
+  </Provider>
 );
 
-// If you want to start measuring performance in your app, pass a function
-// to log results (for example: reportWebVitals(console.log))
-// or send to an analytics endpoint. Learn more: https://bit.ly/CRA-vitals
-reportWebVitals();
+ReactDOM.render(site, document.getElementById('root'));
