@@ -23,7 +23,7 @@ export const App: FC = ({ children }) => {
     return () => {
       window.removeEventListener('blur', onBlur);
     };
-  }, []);
+  }, [dispatch]);
 
   return (
     <>

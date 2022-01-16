@@ -17,7 +17,7 @@ const Orderbook: React.FC<Props> = ({ heading }) => {
   useEffect(() => {
     const fn = hasFocus ? start : stop;
     fn();
-  }, [hasFocus]);
+  }, [hasFocus, start, stop]);
 
   if (orderbook.status === 'loading') {
     return <span>Loading...</span>;
