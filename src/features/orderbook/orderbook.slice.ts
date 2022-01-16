@@ -7,7 +7,7 @@ import {
 } from '@reduxjs/toolkit';
 import { tick } from '../../app/app.slice';
 import { AppState } from '../..';
-import { Contract, Order, OrderBook, OrderProps, OrderState } from './orderbook.types';
+import { Contract, Order, OrderbookProps, OrderProps, OrdersState } from './orderbook.types';
 
 type OrderbookUpdate = { bids: Order[]; asks: Order[] };
 
@@ -16,11 +16,11 @@ const orderAdapter = createEntityAdapter<Order>({
   sortComparer: (a, b) => b.price - a.price,
 });
 
-const initialState: OrderState = {
+const initialState: OrdersState = {
   bids: orderAdapter.getInitialState(),
   asks: orderAdapter.getInitialState(),
-  stashedBids: [],
-  stashedAsks: [],
+  queuedBids: [],
+  queuedAsks: [],
   contract: 'PI_XBTUSD',
 };
 
@@ -62,28 +62,28 @@ const ordersSlice = createSlice({
       state.contract = action.payload;
       state.bids = orderAdapter.getInitialState();
       state.asks = orderAdapter.getInitialState();
-      state.stashedBids = [];
-      state.stashedAsks = [];
+      state.queuedBids = [];
+      state.queuedAsks = [];
     },
     setSnapshot: (state, action: PayloadAction<OrderbookUpdate>) => {
       orderAdapter.setAll(state.bids, action.payload.bids);
       orderAdapter.setAll(state.asks, action.payload.asks);
-      state.stashedBids = [];
-      state.stashedAsks = [];
+      state.queuedBids = [];
+      state.queuedAsks = [];
       pruneEmptyOrders(state.bids);
       pruneEmptyOrders(state.asks);
     },
     updateDelta: (state, action: PayloadAction<OrderbookUpdate>) => {
-      state.stashedBids.push(...action.payload.bids);
-      state.stashedAsks.push(...action.payload.asks);
+      state.queuedBids.push(...action.payload.bids);
+      state.queuedAsks.push(...action.payload.asks);
     },
   },
   extraReducers: (builder) => {
     builder.addCase(tick, (state) => {
-      orderAdapter.upsertMany(state.bids, state.stashedBids);
-      orderAdapter.upsertMany(state.asks, state.stashedAsks);
-      state.stashedBids = [];
-      state.stashedAsks = [];
+      orderAdapter.upsertMany(state.bids, state.queuedBids);
+      orderAdapter.upsertMany(state.asks, state.queuedAsks);
+      state.queuedBids = [];
+      state.queuedAsks = [];
       pruneEmptyOrders(state.bids);
       pruneEmptyOrders(state.asks);
     });
@@ -91,15 +91,15 @@ const ordersSlice = createSlice({
 });
 
 /**
- * Returns a properly formatted order, ready for display.
+ * Returns a properly formatted order ready for display.
  *
  */
-const getOrderProps = (level: number, total: number, size: number, price: number) => ({
+const getOrderProps = (level: number, total: number, size: number, price: number): OrderProps => ({
   level,
-  total,
-  displayTotal: total.toLocaleString(),
-  displaySize: size.toLocaleString(),
-  displayPrice: price.toFixed(2).toLocaleString(),
+  levelTotal: total,
+  total: total.toLocaleString(),
+  size: size.toLocaleString(),
+  price: price.toFixed(2).toLocaleString(),
 });
 
 /**
@@ -109,7 +109,7 @@ const getOrderProps = (level: number, total: number, size: number, price: number
 export const orderbookSelector = createSelector(
   bidsSelector,
   asksSelector,
-  (bidDict, askDict): OrderBook => {
+  (bidDict, askDict): OrderbookProps => {
     const bidList = selectAll(bidDict);
     const askList = selectAll(askDict).reverse();
     const levels = Math.min(bidList.length, askList.length, 16);
@@ -139,7 +139,7 @@ export const orderbookSelector = createSelector(
       asks,
       spread: spread.toFixed(1).toLocaleString(),
       spreadPercent: ((spread / bidList[0].price) * 100).toFixed(2),
-      getRatio: (o) => o.total / Math.max(asksTotal, bidsTotal),
+      getRatio: (o) => o.levelTotal / Math.max(asksTotal, bidsTotal),
     };
   }
 );

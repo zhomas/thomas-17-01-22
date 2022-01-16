@@ -1,11 +1,17 @@
-# Crypto Orderbook
+# React Orderbook
+
+A visual representation of live currency trading.
 
 ![](orderbook.gif)
 
-A visual representation of live currency trading. Done as a technical assessment.
+## Development
 
-## Tech used
+The following scripts are available for local development:
 
-- React
-- Typescript
-- Redux
+```bash
+# test
+yarn test
+
+# run with webpack watch
+yarn start
+```

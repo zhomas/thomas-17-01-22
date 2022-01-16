@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import styled from 'styled-components';
-import { OrderBook } from './orderbook.types';
+import { OrderbookProps } from './orderbook.types';
 
 const Row = styled.div`
   display: flex;
@@ -144,7 +144,7 @@ const Heading = styled.div`
 
 interface Props {
   heading: string;
-  orderbook: OrderBook;
+  orderbook: OrderbookProps;
 }
 
 const Orderbook: React.FC<Props> = ({ heading, orderbook }) => (
@@ -162,9 +162,9 @@ const Orderbook: React.FC<Props> = ({ heading, orderbook }) => (
       <DataSet>
         {orderbook.bids.map((bid) => (
           <Row key={bid.level}>
-            <CellPrice>{bid.displayPrice}</CellPrice>
-            <Cell>{bid.displaySize}</Cell>
-            <Cell>{bid.displayTotal}</Cell>
+            <CellPrice>{bid.price}</CellPrice>
+            <Cell>{bid.size}</Cell>
+            <Cell>{bid.total}</Cell>
             <DepthGraphBids style={{ transform: `scaleX(${orderbook.getRatio(bid)})` }} />
           </Row>
         ))}
@@ -179,9 +179,9 @@ const Orderbook: React.FC<Props> = ({ heading, orderbook }) => (
       <DataSet>
         {orderbook.asks.map((ask) => (
           <Row key={ask.level}>
-            <CellPrice>{ask.displayPrice}</CellPrice>
-            <Cell>{ask.displaySize}</Cell>
-            <Cell>{ask.displayTotal}</Cell>
+            <CellPrice>{ask.price}</CellPrice>
+            <Cell>{ask.size}</Cell>
+            <Cell>{ask.total}</Cell>
             <DepthGraphAsks style={{ transform: `scaleX(${orderbook.getRatio(ask)})` }} />
           </Row>
         ))}

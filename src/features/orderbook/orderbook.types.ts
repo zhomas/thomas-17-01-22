@@ -1,6 +1,6 @@
 import { EntityState } from '@reduxjs/toolkit';
 
-export interface Snapshot {
+export interface SnapshotPayload {
   numLevels: number;
   feed: string;
   bids: [number, number][];
@@ -8,7 +8,7 @@ export interface Snapshot {
   product_id: Contract;
 }
 
-export interface Delta {
+export interface DeltaPayload {
   feed: string;
   product_id: Contract;
   bids: [number, number][];
@@ -18,23 +18,23 @@ export interface Delta {
 export type Contract = 'PI_XBTUSD' | 'PI_ETHUSD';
 export type Order = { price: number; size: number };
 
-export interface OrderState {
+export interface OrdersState {
   bids: EntityState<Order>;
   asks: EntityState<Order>;
   contract: Contract;
-  stashedBids: Order[];
-  stashedAsks: Order[];
+  queuedBids: Order[];
+  queuedAsks: Order[];
 }
 
 export interface OrderProps {
   level: number;
-  total: number;
-  displayPrice: string;
-  displayTotal: string;
-  displaySize: string;
+  levelTotal: number;
+  price: string;
+  total: string;
+  size: string;
 }
 
-export interface OrderBook {
+export interface OrderbookProps {
   bids: OrderProps[];
   asks: OrderProps[];
   spread: string;
@@ -42,7 +42,7 @@ export interface OrderBook {
   getRatio: (o: OrderProps) => number;
 }
 
-export type APIResponse = Delta | Snapshot;
+export type APIResponse = DeltaPayload | SnapshotPayload;
 
 export type APIRequest = {
   event: 'subscribe' | 'unsubscribe';
@@ -58,10 +58,10 @@ function isOrderListResponse(x: unknown): x is APIResponse {
   return false;
 }
 
-export function isSnapshotResponse(x: unknown): x is Snapshot {
+export function isSnapshotResponse(x: unknown): x is SnapshotPayload {
   return isOrderListResponse(x) && 'numLevels' in x;
 }
 
-export function isDeltaResponse(x: unknown): x is Delta {
+export function isDeltaResponse(x: unknown): x is DeltaPayload {
   return isOrderListResponse(x) && !isSnapshotResponse(x);
 }
