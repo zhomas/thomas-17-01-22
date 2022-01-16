@@ -15,7 +15,6 @@ const siteSlice = createSlice({
   reducers: {
     setHasFocus: (state, action: PayloadAction<boolean>) => {
       state.hasFocus = action.payload;
-      console.log('focus');
     },
     tick: () => {
       console.log('tick');
