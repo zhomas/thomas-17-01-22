@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useMemo, useRef } from 'react';
 
 interface WebsocketOptions<TResponse> {
   url: string;
@@ -8,31 +8,34 @@ interface WebsocketOptions<TResponse> {
 
 export function useWebsocket<TMessage, Tresponse>(opts: WebsocketOptions<Tresponse>) {
   const websocket = useRef<WebSocket | null>(null);
-  return {
-    start: () => {
-      const ws = new WebSocket(opts.url);
-      websocket.current = ws;
+  return useMemo(
+    () => ({
+      start: () => {
+        const ws = new WebSocket(opts.url);
+        websocket.current = ws;
 
-      ws.onopen = () => {
-        console.log('opening connection...');
-        opts.onOpen();
-      };
+        ws.onopen = () => {
+          console.log('opening connection...');
+          opts.onOpen();
+        };
 
-      ws.onclose = () => {
-        console.log('closing connection...');
-      };
+        ws.onclose = () => {
+          console.log('closing connection...');
+        };
 
-      ws.onmessage = (e) => {
-        const result = JSON.parse(e.data);
-        opts.onMessage(result);
-      };
-    },
-    stop: () => {
-      websocket.current?.close();
-    },
-    sendMessage: (message: TMessage) => {
-      const json = JSON.stringify(message);
-      websocket.current?.send(json);
-    },
-  };
+        ws.onmessage = (e) => {
+          const result = JSON.parse(e.data);
+          opts.onMessage(result);
+        };
+      },
+      stop: () => {
+        websocket.current?.close();
+      },
+      sendMessage: (message: TMessage) => {
+        const json = JSON.stringify(message);
+        websocket.current?.send(json);
+      },
+    }),
+    [websocket]
+  );
 }
