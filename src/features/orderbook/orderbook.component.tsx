@@ -1,9 +1,6 @@
-import React, { FC } from 'react';
+import React, { useEffect } from 'react';
 import styled from 'styled-components';
-import { orderbookSelector } from './orders.slice';
-import { connect, ConnectedProps } from 'react-redux';
-
-import { AppState } from '../..';
+import { OrderBook } from './orderbook.types';
 
 const Row = styled.div`
   display: flex;
@@ -145,63 +142,52 @@ const Heading = styled.div`
   }
 `;
 
-type Props = ConnectedProps<typeof connector>;
+interface Props {
+  heading: string;
+  orderbook: OrderBook;
+}
 
-const Orders: FC<Props> = ({ orderbook }) => {
-  const { bids, asks, spread, spreadPercent, getRatio } = orderbook;
+const Orderbook: React.FC<Props> = ({ heading, orderbook }) => (
+  <Container>
+    <Heading>{heading}</Heading>
+    <Spread>
+      Spread: {orderbook.spread} ({orderbook.spreadPercent}%)
+    </Spread>
+    <Bids>
+      <HeadingRow>
+        <Cell>Price</Cell>
+        <Cell>Size</Cell>
+        <Cell>Total</Cell>
+      </HeadingRow>
+      <DataSet>
+        {orderbook.bids.map((bid) => (
+          <Row key={bid.level}>
+            <CellPrice>{bid.displayPrice}</CellPrice>
+            <Cell>{bid.displaySize}</Cell>
+            <Cell>{bid.displayTotal}</Cell>
+            <DepthGraphBids style={{ transform: `scaleX(${orderbook.getRatio(bid)})` }} />
+          </Row>
+        ))}
+      </DataSet>
+    </Bids>
+    <Asks>
+      <HeadingRow>
+        <Cell>Price</Cell>
+        <Cell>Size</Cell>
+        <Cell>Total</Cell>
+      </HeadingRow>
+      <DataSet>
+        {orderbook.asks.map((ask) => (
+          <Row key={ask.level}>
+            <CellPrice>{ask.displayPrice}</CellPrice>
+            <Cell>{ask.displaySize}</Cell>
+            <Cell>{ask.displayTotal}</Cell>
+            <DepthGraphAsks style={{ transform: `scaleX(${orderbook.getRatio(ask)})` }} />
+          </Row>
+        ))}
+      </DataSet>
+    </Asks>
+  </Container>
+);
 
-  console.log('render');
-
-  return (
-    <Container>
-      <Heading>Order Book</Heading>
-      <Spread>
-        Spread: {spread} ({spreadPercent}%)
-      </Spread>
-      <Bids>
-        <HeadingRow>
-          <Cell>Price</Cell>
-          <Cell>Size</Cell>
-          <Cell>Total</Cell>
-        </HeadingRow>
-        <DataSet>
-          {bids.map((bid) => (
-            <Row key={bid.level}>
-              <CellPrice>{bid.displayPrice}</CellPrice>
-              <Cell>{bid.displaySize}</Cell>
-              <Cell>{bid.displayTotal}</Cell>
-              <DepthGraphBids style={{ transform: `scaleX(${getRatio(bid)})` }} />
-            </Row>
-          ))}
-        </DataSet>
-      </Bids>
-      <Asks>
-        <HeadingRow>
-          <Cell>Price</Cell>
-          <Cell>Size</Cell>
-          <Cell>Total</Cell>
-        </HeadingRow>
-        <DataSet>
-          {asks.map((ask) => (
-            <Row key={ask.level}>
-              <CellPrice>{ask.displayPrice}</CellPrice>
-              <Cell>{ask.displaySize}</Cell>
-              <Cell>{ask.displayTotal}</Cell>
-              <DepthGraphAsks style={{ transform: `scaleX(${getRatio(ask)})` }} />
-            </Row>
-          ))}
-        </DataSet>
-      </Asks>
-    </Container>
-  );
-};
-
-const mapState = (state: AppState) => {
-  return {
-    orderbook: orderbookSelector(state),
-  };
-};
-
-const connector = connect(mapState);
-
-export default connector(Orders);
+export default Orderbook;

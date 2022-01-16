@@ -1,5 +1,5 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { AppState } from '../..';
+import { AppState } from '..';
 
 interface SiteState {
   hasFocus: boolean;

@@ -1,15 +1,13 @@
 import ReactDOM from 'react-dom';
-import './index.css';
-import orderbookReducer from './features/orders/orders.slice';
-import siteReducer from './features/site/site.slice';
 
+import appReducer from './app/app.slice';
+import orderbookReducer from './features/orderbook/orderbook.slice';
 import { combineReducers, configureStore } from '@reduxjs/toolkit';
 import { Provider, TypedUseSelectorHook, useDispatch, useSelector } from 'react-redux';
-import Site from './features/site/site.feature';
-import Orderbook from './features/orders/orders.container';
+import { App } from './app';
 
 const rootReducer = combineReducers({
-  site: siteReducer,
+  site: appReducer,
   orderbook: orderbookReducer,
 });
 
@@ -24,9 +22,7 @@ export const useAppSelector: TypedUseSelectorHook<AppState> = useSelector;
 
 ReactDOM.render(
   <Provider store={store}>
-    <Site>
-      <Orderbook />
-    </Site>
+    <App />
   </Provider>,
   document.getElementById('root')
 );

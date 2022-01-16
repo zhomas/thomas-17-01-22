@@ -1,8 +1,10 @@
 import React, { FC, useState, useEffect } from 'react';
-import { useAppDispatch, useAppSelector } from '../..';
-import { tick, hasFocusSelector, setHasFocus } from './site.slice';
+import { useAppDispatch, useAppSelector } from '..';
+import { tick, hasFocusSelector, setHasFocus } from './app.slice';
+import Orderbook from '../features/orderbook';
+import './index.css';
 
-const Site: FC = ({ children }) => {
+export const App: FC = ({ children }) => {
   const dispatch = useAppDispatch();
   const hasFocus = useAppSelector(hasFocusSelector);
 
@@ -26,10 +28,8 @@ const Site: FC = ({ children }) => {
 
   return (
     <>
-      {children}
+      <Orderbook />
       {!hasFocus && <button onClick={handleClick}>Resume</button>}
     </>
   );
 };
-
-export default Site;

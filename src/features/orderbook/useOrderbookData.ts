@@ -4,13 +4,11 @@ import {
   APIRequest,
   APIResponse,
   Contract,
-  Delta,
   isDeltaResponse,
   isSnapshotResponse,
   Order,
-  Snapshot,
 } from './orderbook.types';
-import { activeContractSelector, setSnapshot, setContract, updateDelta } from './orders.slice';
+import { activeContractSelector, setSnapshot, setContract, updateDelta } from './orderbook.slice';
 
 const getSubscribeMessage = (to: Contract): APIRequest => ({
   event: 'subscribe',

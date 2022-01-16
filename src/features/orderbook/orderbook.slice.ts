@@ -5,7 +5,7 @@ import {
   EntityState,
   PayloadAction,
 } from '@reduxjs/toolkit';
-import { tick } from '../site/site.slice';
+import { tick } from '../../app/app.slice';
 import { AppState } from '../..';
 import { Contract, Order, OrderBook, OrderProps, OrderState } from './orderbook.types';
 
@@ -51,7 +51,7 @@ const pruneEmptyOrders = (list: EntityState<Order>) => {
   orderAdapter.removeMany(list, ids);
 };
 
-type OrderbookUpdate = { bids: Order[]; asks: Order[] }
+type OrderbookUpdate = { bids: Order[]; asks: Order[] };
 
 const ordersSlice = createSlice({
   name: 'orders',
